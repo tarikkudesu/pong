@@ -1,6 +1,8 @@
-export default function (fastify, opts) {
+export default (fastify) => {
     fastify.get('/', async (request, reply) => {
         const fetchedUsers = await fastify.userdao.getUsers();
-        return {users: fetchedUsers}
+        return {
+            users: fetchedUsers
+        }
     })
 }

@@ -11,7 +11,7 @@ const fastify = Fastify({
 });
 
 fastify.register(await import('./database/SQLite.js'));
-fastify.register(await import('./router/index.js'));
+fastify.register(await import('./controller/index.js'));
 // fastify.register(await import('./business/index.js'));
 
 let server = async () => {

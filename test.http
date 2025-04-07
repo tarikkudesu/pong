@@ -1,6 +1,6 @@
 
 
-GET http://localhost:3000/users http/1.1
+GET http://localhost:3000/user/3 http/1.1
 
 
 # POST http://localhost:3000/adduser HTTP/1.1

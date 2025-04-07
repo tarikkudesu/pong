@@ -1,34 +1,40 @@
 class UserDAO
 {
-    constructor(db) {
+    constructor(db)
+    {
         this.db = db;
     }
 
     async addUser(user)
     {
-        const statement = this.db.prepare("INSERT INTO user(id, name, bio) VALUES (?, ?, ?)");
-        statement.run(user.id, user.name, user.bio);
+        this.db
+            .prepare("INSERT INTO user(id, name, bio) VALUES (?, ?, ?)")
+            .run(user.id, user.name, user.bio);
     }
-
-    async getUser(id)
-    {
-
-    }
-
+    
     async getUsers()
     {
         return this.db.prepare('SELECT * FROM user').all()
     }
 
-    async deleteUser()
+    async getUser(id)
     {
-
+        return this.db.prepare(`SELECT * FROM user WHERE id = ?`).get(id);
     }
-
-    async updateUser()
+    
+    async deleteUser(id)
     {
-
+        this.db
+            .prepare(`DELETE FROM user WHERE id = ?`)
+            .run(id);
     }
+    
+    async updateUser(id, user)
+    {
+        this.db
+            .prepare(`UPDATE user SET name = ?, bio = ? WHERE id = ?`)
+            .run(user.name, user.bio, id);
+    }    
 }
 
 export {UserDAO};

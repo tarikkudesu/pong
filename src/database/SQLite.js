@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin'
 import Database from 'better-sqlite3'
 
-export default fp(async function (fastify, opts) {
+export default fp(async function (fastify) {
   const db = new Database('./src/database/user.sqlite')
 
   db.exec(`
