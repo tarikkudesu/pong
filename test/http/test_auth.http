@@ -1,0 +1,47 @@
+
+POST http://localhost:3000/api/auth/signin HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "otman",
+    "pass": "otman"
+}
+
+###
+
+POST http://localhost:3000/api/auth/signup HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "hamid",
+    "email": "hamid@gmail.com",
+    "pass": "hamid"
+}
+
+###
+
+POST http://localhost:3000/api/auth/logout HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "otman"
+}
+
+###
+
+POST http://localhost:3000/api/auth/password/get-otp HTTP/1.1
+Content-Type: application/json
+
+{
+    "email": "ooulcaid.1337@gmail.com"
+}
+
+###
+
+POST http://localhost:3000/api/auth/password/validate-otp HTTP/1.1
+Content-Type: application/json
+
+{
+    "email": "ooulcaid.1337@gmail.com",
+    "otp": "091827"
+}

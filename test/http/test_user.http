@@ -1,0 +1,30 @@
+
+POST http://localhost:3000/api/user/update HTTP/1.1
+Content-Type: application/json
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ1NTYzNDg4LCJleHAiOjE3NTA3NDc0ODh9.KjB-dl5JLFbG5335oTRg0azcOfBTdVazrCOY6QblvmM
+
+{
+  "username": "ali",
+  "data" : {
+    "username": "salam",
+    "email": "kalam",
+    "bio": "machi 3alam"
+  }
+}
+
+###
+
+#get a specific user
+GET http://localhost:3000/api/user/salam HTTP/1.1 
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ1NTYzNDg4LCJleHAiOjE3NTA3NDc0ODh9.KjB-dl5JLFbG5335oTRg0azcOfBTdVazrCOY6QblvmM
+
+###
+
+#get all users
+GET http://localhost:3000/api/user HTTP/1.1 
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ1NTYzNDg4LCJleHAiOjE3NTA3NDc0ODh9.KjB-dl5JLFbG5335oTRg0azcOfBTdVazrCOY6QblvmM
+
+###
+
+DELETE http://localhost:3000/api/user/alli HTTP/1.1 
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ1NTYzNDg4LCJleHAiOjE3NTA3NDc0ODh9.KjB-dl5JLFbG5335oTRg0azcOfBTdVazrCOY6QblvmM

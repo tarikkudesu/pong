@@ -1,0 +1,20 @@
+
+GET http://localhost:3000/api/friend/add/1/2 HTTP/1.1
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ1NTYzNDg4LCJleHAiOjE3NTA3NDc0ODh9.KjB-dl5JLFbG5335oTRg0azcOfBTdVazrCOY6QblvmM
+
+###
+
+GET http://localhost:3000/api/friend/accept/3/4 HTTP/1.1
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ1NTYzNDg4LCJleHAiOjE3NTA3NDc0ODh9.KjB-dl5JLFbG5335oTRg0azcOfBTdVazrCOY6QblvmM
+
+###
+
+GET http://localhost:3000/api/friend/remove/2/3 HTTP/1.1
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ1NTYzNDg4LCJleHAiOjE3NTA3NDc0ODh9.KjB-dl5JLFbG5335oTRg0azcOfBTdVazrCOY6QblvmM
+
+###
+
+GET http://localhost:3000/api/friend/block/1/2 HTTP/1.1
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ1NTYzNDg4LCJleHAiOjE3NTA3NDc0ODh9.KjB-dl5JLFbG5335oTRg0azcOfBTdVazrCOY6QblvmM
+
+###
