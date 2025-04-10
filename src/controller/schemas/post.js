@@ -2,8 +2,8 @@ export default {
     body : {
         type : 'object',
         properties : {
-            id: {type : 'number'},
-            name: {type : 'string'},
+            username: {type : 'string'},
+            email: {type : 'String'},
             bio: {type : 'string'},
         },
         required : ['id', 'name', 'bio']

@@ -1,0 +1,37 @@
+POST http://localhost:3000/user/update HTTP/1.1
+Content-Type: application/json
+
+{
+  "user": "salam",
+  "data" : {
+    "username": "salam",
+    "email": "kalam",
+    "bio": "machi 3alam"
+  }
+}
+
+###
+
+POST http://localhost:3000/user/add HTTP/1.1
+Content-Type: application/json
+
+{
+  "data" : {
+    "username": "salam",
+    "email": "kalam",
+    "bio": "3alam"
+  }
+}
+###
+
+#get a specific user
+GET http://localhost:3000/user/salam HTTP/1.1 
+
+###
+
+#get all users
+GET http://localhost:3000/user HTTP/1.1 
+
+###
+
+DELETE http://localhost:3000/user/salam HTTP/1.1 

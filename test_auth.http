@@ -1,0 +1,13 @@
+
+POST http://localhost:3000/auth/signin HTTP/1.1
+
+###
+
+POST http://localhost:3000/auth/signup HTTP/1.1
+
+###
+
+POST http://localhost:3000/auth/logout HTTP/1.1
+
+###
+

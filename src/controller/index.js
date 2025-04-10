@@ -1,27 +1,14 @@
-
-//main router plugin
+//main controller plugins
 export default async (fastify) => {
-
     /**
-     * here should be the business layer instance 
-     * that communicate with controller
-     * so dao is just temp wiring !!!
-     */ 
-    fastify.register(await import('../dao/index.js'));
-
-
-    /**
-     * decorator
+     * hooks
      */
-    // fastify.decorate('postSchema', await import('./schemas/post.js'))
+    // fastify.register(await import('./hooks/.js'));
 
     /**
      * routes
      */
-
-    fastify.register(await import('./routes/get-all.js'), {prefix: '/users'});
-    fastify.register(await import('./routes/add.js'), {prefix: '/adduser'});
-    fastify.register(await import('./routes/update.js'), {prefix: '/update/:id'});
-    fastify.register(await import('./routes/delete.js'), {prefix: '/delete/:id'});
-    fastify.register(await import('./routes/get-one.js'), {prefix: '/user/:id'});
+    fastify.register(await import('./routes/user.js'), {prefix: '/user'});
+    fastify.register(await import('./routes/auth.js'), {prefix: '/auth'});
+    fastify.register(await import('./routes/friend.js'), {prefix: '/friend'});
 }

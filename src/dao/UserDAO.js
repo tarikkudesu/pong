@@ -8,8 +8,8 @@ class UserDAO
     async addUser(user)
     {
         this.db
-            .prepare("INSERT INTO user(id, name, bio) VALUES (?, ?, ?)")
-            .run(user.id, user.name, user.bio);
+            .prepare("INSERT INTO user(username, email, bio) VALUES (?, ?, ?)")
+            .run(user.username, user.email, user.bio);
     }
     
     async getUsers()
@@ -17,24 +17,26 @@ class UserDAO
         return this.db.prepare('SELECT * FROM user').all()
     }
 
-    async getUser(id)
+    async getUser(username)
     {
-        return this.db.prepare(`SELECT * FROM user WHERE id = ?`).get(id);
+        return this.db.prepare(`SELECT * FROM user WHERE username = ?`).get(username);
     }
     
-    async deleteUser(id)
+    async deleteUser(username)
     {
         this.db
-            .prepare(`DELETE FROM user WHERE id = ?`)
-            .run(id);
+            .prepare(`DELETE FROM user WHERE username = ?`)
+            .run(username);
     }
     
-    async updateUser(id, user)
+    async updateUser(username, user)
     {
-        this.db
-            .prepare(`UPDATE user SET name = ?, bio = ? WHERE id = ?`)
-            .run(user.name, user.bio, id);
+        console.log(user);
+        console.log(username);
+        console.log(this.db
+            .prepare(`UPDATE user SET username = ?, email = ?, bio = ? WHERE username = ?`)
+            .run(user.username, user.email, user.bio, username));
     }    
 }
 
-export {UserDAO};
+export { UserDAO };
