@@ -1,10 +1,12 @@
 import Fastify from 'fastify'
 import env from 'dotenv'
+import path from 'path'
 
 /**
  * load the environnement vars from .env
  */
-env.config();
+
+env.config({ path: path.resolve('ressources/credentials/.env') });
 
 /**
  * fastify instance
@@ -27,10 +29,15 @@ fastify.register(await import('./dao/index.js'));
 fastify.register(await import('./service/index.js'));
 fastify.register(await import('./controller/index.js'));
 
-fastify.listen({
-    port : process.env.PORT || 3000,
-    host: process.env.HOST || '127.0.0.1',      
-});
+let start = async () => 
+{
+    fastify.listen({
+        port : process.env.PORT || 3000,
+        host: process.env.HOST || '127.0.0.1', 
+    });
+}
+
+await start();
 
 /**
  * to test this component, you can install VSCode `REST Client` tool 

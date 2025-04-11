@@ -1,4 +1,4 @@
-import schema from '../schemas/post.js'
+// import schema from '../schemas/response.js'
 
 export default (fastify) => {
 
@@ -6,7 +6,7 @@ export default (fastify) => {
      * middelwares will be implemented later
      */
 
-    fastify.post('/add', schema, async (request, reply) => {
+    fastify.post('/add', async (request, reply) => {
         try {
             await fastify.userService.addUser(request.body.data);
             reply.code(201).send({
@@ -20,7 +20,7 @@ export default (fastify) => {
         }
     });
     
-    fastify.post('/update', schema, async (request, reply) => {
+    fastify.post('/update', async (request, reply) => {
         try {
             await fastify.userService.updateUser(request.body.user, request.body.data);
             reply.code(201).send({

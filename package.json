@@ -7,11 +7,14 @@
     "dev": "node src/server"
   },
   "dependencies": {
+    "@fastify/websocket": "^11.0.2",
     "better-sqlite3": "^11.9.1",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.2",
     "fastify-plugin": "^5.0.1",
-    "pino-pretty": "^13.0.0"
+    "pino-pretty": "^13.0.0",
+    "redis": "^4.7.0",
+    "ws": "^8.18.1"
   },
   "type": "module",
   "keywords": [],

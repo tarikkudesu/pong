@@ -8,7 +8,8 @@ export default async (fastify) => {
     /**
      * routes
      */
-    fastify.register(await import('./routes/user.js'), {prefix: '/user'});
-    fastify.register(await import('./routes/auth.js'), {prefix: '/auth'});
-    fastify.register(await import('./routes/friend.js'), {prefix: '/friend'});
+    fastify.register(await import('./routes/user.js'), {prefix: '/api/user'});
+    fastify.register(await import('./routes/auth.js'), {prefix: '/api/auth'});
+    fastify.register(await import('./routes/friend.js'), {prefix: '/api/friend'});
+    fastify.register(await import('./routes/chat.js'), {prefix: '/api/chat'});
 }

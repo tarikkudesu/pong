@@ -1,16 +1,16 @@
 
-GET http://localhost:3000/friend/add/1/2 HTTP/1.1
+GET http://localhost:3000/api/friend/add/1/2 HTTP/1.1
 
 ###
 
-GET http://localhost:3000/friend/accept/3/4 HTTP/1.1
+GET http://localhost:3000/api/friend/accept/3/4 HTTP/1.1
 
 ###
 
-GET http://localhost:3000/friend/remove/2/3 HTTP/1.1
+GET http://localhost:3000/api/friend/remove/2/3 HTTP/1.1
 
 ###
 
-GET http://localhost:3000/friend/block/1/2 HTTP/1.1
+GET http://localhost:3000/api/friend/block/1/2 HTTP/1.1
 
 ###

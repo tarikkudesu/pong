@@ -15,9 +15,10 @@ CREATE TABLE IF NOT EXISTS friendship (
 
 --mock data
 
-INSERT INTO friendship (uid1, uid2, stat) VALUES (1, 2, 'pending');
-INSERT INTO friendship (uid1, uid2, stat) VALUES (1, 3, 'approved');
-INSERT INTO friendship (uid1, uid2, stat) VALUES (1, 4, 'blocked');
-INSERT INTO friendship (uid1, uid2, stat) VALUES (2, 3, 'approved');
-INSERT INTO friendship (uid1, uid2, stat) VALUES (2, 4, 'pending');
-INSERT INTO friendship (uid1, uid2, stat) VALUES (3, 4, 'approved');
+INSERT OR IGNORE INTO friendship (uid1, uid2, stat) VALUES 
+(1, 2, 'pending'),
+(1, 3, 'approved'),
+(1, 4, 'blocked'),
+(2, 3, 'approved'),
+(2, 4, 'pending'),
+(3, 4, 'approved');
