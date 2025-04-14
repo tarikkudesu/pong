@@ -6,3 +6,5 @@ class AuthDAO {
 
 
 }
+
+export { AuthDAO };

@@ -1,4 +1,4 @@
-class FriendDAO {
+class GameDAO {
     constructor(db)
     {
         this.db = db;
@@ -7,4 +7,4 @@ class FriendDAO {
 
 }
 
-export { FriendDAO };
+export { GameDAO };

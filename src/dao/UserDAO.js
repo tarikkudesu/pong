@@ -31,11 +31,9 @@ class UserDAO
     
     async updateUser(username, user)
     {
-        console.log(user);
-        console.log(username);
-        console.log(this.db
+        this.db
             .prepare(`UPDATE user SET username = ?, email = ?, bio = ? WHERE username = ?`)
-            .run(user.username, user.email, user.bio, username));
+            .run(user.username, user.email, user.bio, username);
     }    
 }
 
