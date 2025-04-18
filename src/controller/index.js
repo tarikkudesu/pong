@@ -1,9 +1,16 @@
 //main controller plugins
 export default async (fastify) => {
     /**
+     * decorators
+     */
+    fastify.decorate('status_code', (await import('http')).STATUS_CODES)
+
+    
+    /**
      * hooks
      */
-    // fastify.register(await import('./hooks/.js'));
+    fastify.register(await import('./hooks/middleware.js'));
+    
 
     /**
      * routes

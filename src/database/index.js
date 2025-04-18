@@ -1,18 +1,18 @@
 import Database from 'better-sqlite3'
-import user from './user/user.js'
-import chat from './chat/chat.js'
-import friend from './friend/friend.js'
-// import auth from './auth/auth.js'
+import load from "./loader.js";
 
-let connection = async () => {
-
+let connection = () =>
+{
+    const services = [
+        './src/database/sql/user.sql',
+        './src/database/sql/chat.sql',
+        './src/database/sql/friend.sql',
+        // './src/database/sql/auth.sql',
+        // './src/database/sql/game.sql',
+    ];
     const db = new Database('./src/database/pong.sqlite')
-    await user.load(db);
-    await friend.load(db);
-    await chat.load(db);
-    // await auth.load(db);
+    services.forEach(service => load(db, service));
     return db;
 }
 
-export default await connection()
-
+export default connection();

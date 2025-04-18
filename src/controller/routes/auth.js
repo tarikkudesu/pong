@@ -6,8 +6,10 @@ export default (fastify) => {
 
     fastify.post('/signin', async (request, reply) => {    
         try {
-            //logic
-            return {signin: 'signin'}
+            return {
+                signin: 'signin',
+                token: fastify.authService.generateToken(request.body, "salam kalam 3alam", '60d')
+            }
         } catch (error) {
             fastify.log.error(error.msg, error.stack);
             reply.code(400).send({
@@ -19,7 +21,10 @@ export default (fastify) => {
     fastify.post('/signup', async (request, reply) => {
         try {
             //logic
-            return { signup: 'signup' }
+            return {
+                signin: 'signup',
+                token: fastify.authService.generateToken(request.body, "salam kalam 3alam", '60d')
+            }
         } catch (error) {
             fastify.log.error(error.msg, error.stack);
             reply.code(400).send({

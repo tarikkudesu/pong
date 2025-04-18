@@ -22,4 +22,3 @@ INSERT OR IGNORE INTO messages (u_from, u_to, content, stat) VALUES
 (2, 3, 'Tu peux ajouter une règle firewall pour Jenkins ?', 'sent'),
 (4, 1, 'Bonne nouvelle, le déploiement est passé sans erreur.', 'vue'),
 (3, 2, 'Je viens de redémarrer le service nginx, c’est bon maintenant.', 'received');
-

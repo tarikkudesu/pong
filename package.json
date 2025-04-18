@@ -1,22 +1,32 @@
 {
-  "name": "fastify",
+  "name": "pong",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "node src/server"
+    "dev": "nodemon src/server"
   },
   "dependencies": {
     "@fastify/websocket": "^11.0.2",
     "better-sqlite3": "^11.9.1",
-    "dotenv": "^16.4.7",
     "fastify": "^5.2.2",
     "fastify-plugin": "^5.0.1",
+    "jsonwebtoken": "^9.0.2",
     "pino-pretty": "^13.0.0",
-    "redis": "^4.7.0",
-    "ws": "^8.18.1"
+    "redis": "^4.7.0"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "dotenv": "^16.5.0",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
 }
