@@ -39,5 +39,5 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJ1c2Vyb
 
 ###
 
-DELETE http://localhost:3000/api/user/salam HTTP/1.1 
+DELETE http://localhost:3000/api/user/ootman HTTP/1.1 
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJ1c2VybmFtZSI6Im90bWFuIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsImlhdCI6MTc0NDk3MDY2MiwiZXhwIjoxNzUwMTU0NjYyfQ.GtcP9SXPQRXYiXtyRpcbaQtLG1wHL8oCO9WPBEwMJ4k

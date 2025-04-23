@@ -10,29 +10,50 @@ class UserService {
      * 
      */
 
-    addUser(user)
+    async addUser(user)
     {
-        return this.userDao.addUser(user);
+        try {
+            await this.userDao.addUser(user);
+            return true;
+        } catch (error) {            
+            return false;
+        }
     }
 
-    updateUser(name, user)
+    async updateUser(name, user)
     {
-        return this.userDao.updateUser(name, user);
+        try {
+            await this.userDao.updateUser(name, user);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+    
+    async deleteUser(name)
+    {
+        try {
+            await this.userDao.deleteUser(name);
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
 
-    deleteUser(name)
+    async getUser(name)
     {
-        return this.userDao.deleteUser(name)
+        return await this.userDao.getUser(name);
     }
 
-    getUser(name)
+    async getUsers()
     {
-        return this.userDao.getUser(name);
+        return await this.userDao.getUsers();
     }
 
-    getUsers()
+    async userExist(body)
     {
-        return this.userDao.getUsers();
+        const user = await this.getUser(body.username)
+        return (user && body.pass === user.pass)
     }
 }
 

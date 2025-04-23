@@ -1,47 +1,41 @@
+import {signinSchema, signupSchema, logoutSchema} from '../schemas/auth.js'
+
 export default (fastify) => {
     
     /**
      * logic will be implemented later
      */
 
-    fastify.post('/signin', async (request, reply) => {    
-        try {
+    fastify.post('/signin', { schema: signinSchema }, async (request, reply) => {    
+        if (await fastify.userService.userExist(request.body))
+        {
+            const token = fastify.authService.generateToken(request.body, process.env.TOKEN_SECRET || "salam kalam 3alam", '60d');
             return {
-                signin: 'signin',
-                token: fastify.authService.generateToken(request.body, "salam kalam 3alam", '60d')
-            }
-        } catch (error) {
-            fastify.log.error(error.msg, error.stack);
-            reply.code(400).send({
-                message: error.message
-            });
-        }    
+                signin: 'signin', // to remove
+                token
+            };
+        }
+        return reply.code(400).send({
+            error: 'username or pass is wrrong'
+        });
     });
     
-    fastify.post('/signup', async (request, reply) => {
-        try {
-            //logic
+    fastify.post('/signup', { schema: signupSchema }, async (request, reply) => {
+        if (await fastify.userService.addUser(request.body))
+        {
+            const token = fastify.authService.generateToken(request.body, process.env.TOKEN_SECRET || "salam kalam 3alam", '60d'); 
             return {
-                signin: 'signup',
-                token: fastify.authService.generateToken(request.body, "salam kalam 3alam", '60d')
+                signin: 'signup', // to remove
+                token
             }
-        } catch (error) {
-            fastify.log.error(error.msg, error.stack);
-            reply.code(400).send({
-                message: error.message
-            });
-        }    
-    });
-    
-    fastify.post('/logout', async (request, reply) => {        
-            try {
-                //logic
-                return { logout: 'logout' }
-            } catch (error) {
-                fastify.log.error(error.msg, error.stack);
-                reply.code(400).send({
-                    message: error.message
-                });
-            }    
+        }
+        return reply.code(400).send({ // ?? code ??
+            error: 'cannot signup  user'
+        });
+    })
+
+    fastify.post('/logout', { schema: logoutSchema }, async (request, reply) => {        
+        //destroy the JWT
+        return { logout: 'logout' }
     });
 }

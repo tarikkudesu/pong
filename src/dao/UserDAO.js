@@ -7,9 +7,9 @@ class UserDAO
 
     async addUser(user)
     {
-        this.db
-            .prepare("INSERT INTO user(username, email, bio) VALUES (?, ?, ?)")
-            .run(user.username, user.email, user.bio);
+        return this.db
+            .prepare("INSERT INTO user(username, email, pass, bio) VALUES (?, ?, ?, ?)")
+            .run(user.username, user.email, user.pass, user.bio);
     }
     
     async getUsers()

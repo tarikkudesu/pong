@@ -19,7 +19,6 @@ class AuthService
             if (!token)
                 return 400;
             jwt.verify(token, 'salam kalam 3alam');
-            console.log('valid token : ' + token);
             return 200;
         } catch (err) {
             return 401; 
