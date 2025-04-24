@@ -1,5 +1,5 @@
 import fp from "fastify-plugin";
-import { parse } from 'url';
+import cookie from 'cookie';
 
 export default fp(async (fastify) =>
 {
@@ -7,8 +7,9 @@ export default fp(async (fastify) =>
         const baseUrl = 'http://' + (process.env.SERVER_HOST || 'localhost');
         if (!fastify.authService.shouldAuthenticate(new URL(request.url, baseUrl)))
             return ;
-        let status = await fastify.authService.validToken(request.headers['authorization'])
-        if (status >= 400)
-            return reply.code(status).send({message: fastify.status_code[status]});
+        const cookies = cookie.parse(request.headers['cookie'] || '');
+        let status = await fastify.authService.validToken(cookies.token)
+        // if (status >= 400)
+        //     return reply.code(status).send({message: fastify.status_code[status]});
     });
 })

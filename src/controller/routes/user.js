@@ -8,10 +8,11 @@ export default (fastify) => {
     
     fastify.post('/update', async (request, reply) => {
         try {
-            await fastify.userService.updateUser(request.body);
-            return reply.code(201).send({
-                user:  request.body.data
-            });
+            if (await fastify.userService.updateUser(request.body))
+                return reply.code(201).send({
+                    user:  request.body.data
+                });
+            throw new Error('user not exist');
         } catch (error) {
             reply.code(400).send({
                 message: error.message

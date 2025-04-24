@@ -1,10 +1,10 @@
 
 POST http://localhost:3000/api/user/update HTTP/1.1
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6InBhc3MiLCJpYXQiOjE3NDU0NDA4NzIsImV4cCI6MTc1MDYyNDg3Mn0.67TE70IkUr8cwz5Sb3QvK9GWn-Awh0TvGGqF8gDGVMQ
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6InBhc3MiLCJpYXQiOjE3NDU0NDA4NzIsImV4cCI6MTc1MDYyNDg3Mn0.67TE70IkUr8cwz5Sb3QvK9GWn-Awh0TvGGqF8gDGVMQ
 
 {
-  "user": "ali",
+  "username": "ali",
   "data" : {
     "username": "salam",
     "email": "kalam",
@@ -16,15 +16,15 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90b
 
 #get a specific user
 GET http://localhost:3000/api/user/salam HTTP/1.1 
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6InBhc3MiLCJpYXQiOjE3NDU0NDA4NzIsImV4cCI6MTc1MDYyNDg3Mn0.67TE70IkUr8cwz5Sb3QvK9GWn-Awh0TvGGqF8gDGVMQ
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6InBhc3MiLCJpYXQiOjE3NDU0NDA4NzIsImV4cCI6MTc1MDYyNDg3Mn0.67TE70IkUr8cwz5Sb3QvK9GWn-Awh0TvGGqF8gDGVMQ
 
 ###
 
 #get all users
 GET http://localhost:3000/api/user HTTP/1.1 
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6InBhc3MiLCJpYXQiOjE3NDU0NDA4NzIsImV4cCI6MTc1MDYyNDg3Mn0.67TE70IkUr8cwz5Sb3QvK9GWn-Awh0TvGGqF8gDGVMQ
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6InBhc3MiLCJpYXQiOjE3NDU0NDA4NzIsImV4cCI6MTc1MDYyNDg3Mn0.67TE70IkUr8cwz5Sb3QvK9GWn-Awh0TvGGqF8gDGVMQ
 
 ###
 
 DELETE http://localhost:3000/api/user/alli HTTP/1.1 
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6InBhc3MiLCJpYXQiOjE3NDU0NDA4NzIsImV4cCI6MTc1MDYyNDg3Mn0.67TE70IkUr8cwz5Sb3QvK9GWn-Awh0TvGGqF8gDGVMQ
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6InBhc3MiLCJpYXQiOjE3NDU0NDA4NzIsImV4cCI6MTc1MDYyNDg3Mn0.67TE70IkUr8cwz5Sb3QvK9GWn-Awh0TvGGqF8gDGVMQ

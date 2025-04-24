@@ -31,13 +31,14 @@ class UserDAO
             .run(username);
     }
     
-    async updateUser(username, user)
+    async updateUser(field, user)
     {
         let conditions = Object.keys(user).map(key => `${key} = ?`).join(', ');
         let values = Object.values(user);
-        values.push(username);
+        let key = Object.keys(field)[0]
+        values.push(field[key]);
         return this.db
-            .prepare(`UPDATE user SET ${conditions} WHERE username = ?`)
+            .prepare(`UPDATE user SET ${conditions} WHERE ${key} = ?`)
             .run(values);
     }    
 }

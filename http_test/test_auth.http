@@ -3,8 +3,8 @@ POST http://localhost:3000/api/auth/signin HTTP/1.1
 Content-Type: application/json
 
 {
-    "username": "aliii",
-    "pass": "pass"
+    "username": "otman",
+    "pass": "otman"
 }
 
 ###
@@ -29,3 +29,19 @@ Content-Type: application/json
 
 ###
 
+POST http://localhost:3000/api/auth/password/get-otp HTTP/1.1
+Content-Type: application/json
+
+{
+    "email": "ooulcaid.1337@gmail.com"
+}
+
+###
+
+POST http://localhost:3000/api/auth/password/validate-otp HTTP/1.1
+Content-Type: application/json
+
+{
+    "email": "ooulcaid.1337@gmail.com",
+    "otp": "091827"
+}

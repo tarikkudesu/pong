@@ -25,12 +25,13 @@ class UserService {
 
     async updateUser(body)
     {
-        try {
-            await this.userDao.updateUser(body.user, body.data);
-            return true;
-        } catch (error) {
+        const keys = Object.keys(body);
+        const user = await this.userDao.getUser({ [keys[0]]: body[keys[0]] });
+        
+        if (!user)
             return false;
-        }
+        await this.userDao.updateUser( { [keys[0]]: body[keys[0]] }, body.data);              
+        return true;
     }
     
     async deleteUser(name)
