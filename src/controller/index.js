@@ -17,6 +17,7 @@ export default async (fastify) => {
      */
     fastify.register(await import('./routes/user.js'), {prefix: '/api/user'});
     fastify.register(await import('./routes/auth.js'), {prefix: '/api/auth'});
+    fastify.register(await import('./routes/oauth.js'), {prefix: '/api/oauth'});
     fastify.register(await import('./routes/friend.js'), {prefix: '/api/friend'});
     fastify.register(await import('./routes/chat.js'), {prefix: '/api/chat'});
 }

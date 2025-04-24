@@ -29,9 +29,9 @@ class AuthService
 
     shouldAuthenticate(url)
     {
-        const routes = ['/signin', '/signup', '/logout'];
+        const routes = ['/signin', '/signup', '/logout', '/google', '/callback'];
 
-        return !routes.some(path => url.endsWith(path));
+        return !routes.some(path => url.pathname.endsWith(path));
     }
     
     async canSignIn(user)
