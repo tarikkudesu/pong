@@ -5,29 +5,14 @@ export default (fastify) => {
     /**
      * middelwares will be implemented later
      */
-
-    fastify.post('/add', async (request, reply) => {
-        try {
-            await fastify.userService.addUser(request.body.data);
-            reply.code(201).send({
-                user:  request.body.data
-            });
-        } catch (error) {
-            fastify.log.error(error.msg, error.stack);
-            reply.code(400).send({
-                message: error.message
-            });
-        }
-    });
     
     fastify.post('/update', async (request, reply) => {
         try {
-            await fastify.userService.updateUser(request.body.user, request.body.data);
-            reply.code(201).send({
+            await fastify.userService.updateUser(request.body);
+            return reply.code(201).send({
                 user:  request.body.data
             });
         } catch (error) {
-            fastify.log.error(error.msg, error.stack);
             reply.code(400).send({
                 message: error.message
             });

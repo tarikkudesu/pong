@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 class UserService {
     constructor(userDao)
     {
@@ -12,18 +13,20 @@ class UserService {
 
     async addUser(user)
     {
+        user.pass = await bcrypt.hash(user.pass, 10);
         try {
             await this.userDao.addUser(user);
             return true;
-        } catch (error) {            
-            return false;
+        } catch (error) {   
+
+           return false;
         }
     }
 
-    async updateUser(name, user)
+    async updateUser(body)
     {
         try {
-            await this.userDao.updateUser(name, user);
+            await this.userDao.updateUser(body.user, body.data);
             return true;
         } catch (error) {
             return false;
@@ -40,20 +43,14 @@ class UserService {
         }
     }
 
-    async getUser(name)
+    async getUser(username)
     {
-        return await this.userDao.getUser(name);
+        return await this.userDao.getUser({ username });
     }
 
     async getUsers()
     {
         return await this.userDao.getUsers();
-    }
-
-    async userExist(body)
-    {
-        const user = await this.getUser(body.username)
-        return (user && body.pass === user.pass)
     }
 }
 
