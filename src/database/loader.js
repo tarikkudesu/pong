@@ -1,8 +1,8 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 
-export default (dbInstance, sqlPath) => {
-  const sql = fs.readFileSync(sqlPath, 'utf8');
+export default async (dbInstance, sqlPath) => {
   try {
+    const sql = await fs.readFile(sqlPath, 'utf8');
     dbInstance.exec(sql);
   } catch (error) {
     console.error(`Error executing SQL from ${sqlPath}:\n`, error);
