@@ -3,7 +3,6 @@ export default async (fastify) => {
     /**
      * parsers
      */
-
     fastify.register(await import('./parsers/x-www-form-urlencoded.js'))
 
     /**
@@ -13,9 +12,10 @@ export default async (fastify) => {
 
     
     /**
-     * hooks
+     * middlewares
      */
     fastify.register(await import('./hooks/middleware.js'));
+    fastify.register(await import('./schemas/bad-schema.js'));
     
 
     /**

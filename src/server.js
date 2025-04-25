@@ -2,7 +2,7 @@ import Fastify from 'fastify'
 import env from 'dotenv'
 
 class Server {
-    constructor(logger) {        
+    constructor(logger = true) {        
         /**
          * fastify instance
          */
@@ -15,7 +15,8 @@ class Server {
          * the order of the layers is important, due to its architecture nature.
          * dao layer used by service leyer which is used by the controller
          */
-        this.fastify.register(await import('@fastify/cors'), { origin: '*' })
+        
+          
         this.fastify.register(await import('./dao/index.js'));
         this.fastify.register(await import('./services/index.js'));
         this.fastify.register(await import('./controller/index.js'));

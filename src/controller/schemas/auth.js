@@ -3,10 +3,10 @@ export const signinSchema = {
         type: 'object',
         required: ['username', 'pass'],
         properties: {
-            username: { type: 'string' },
-            pass: { type: 'string' }
+          username: { type: 'string', pattern: '^[^<>]*$' },
+          pass: { type: 'string', pattern: '^[^<>]*$' }
         },
-        },
+      },
     };
 
 export const signupSchema = {
@@ -14,9 +14,9 @@ export const signupSchema = {
         type: 'object',
         required: ['username', 'email', 'pass'],
         properties: {
-          username: { type: 'string' },
-          email: { type: 'string' },
-          pass: { type: 'string' },
+          username: { type: 'string', pattern: '^[^<>]*$' },
+          email: { type: 'string', pattern: '^[^<>]*$' },
+          pass: { type: 'string', pattern: '^[^<>]*$' }
         },
       },
     };
@@ -26,7 +26,18 @@ export const logoutSchema = {
         type: 'object',
         required: ['username'],
         properties: {
-          username: { type: 'string' },
+          username: { type: 'string', pattern: '^[^<>]*$' },
         },
       },
     };
+
+export const otpSchema = {
+    body: {
+        type: 'object',
+        required: ['otp'],
+        properties: {
+          otp: { type: 'string', pattern: '^\\d{6}$' }
+        }
+      }
+    };
+    

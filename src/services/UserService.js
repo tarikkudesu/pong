@@ -14,45 +14,67 @@ class UserService {
 
     async addUser(user)
     {
-        user.pass = await bcrypt.hash(user.pass || '', 10);
+        const formatedUser = {
+            username: user.username,
+            email: user.email,
+        };
         try {
-            await this.userDao.addUser(user);
-            return true;
-        } catch (error) {   
-
-           return false;
+            formatedUser.pass = await bcrypt.hash(user.pass || '', 10)
+            await this.userDao.addUser(formatedUser);
+            return { stat: true };
+        } catch (error) {
+            error.stat = false;
+            return error;
         }
     }
 
     async updateUser(body)
     {
         const keys = Object.keys(body);
-        const user = await this.userDao.getUser({ [keys[0]]: body[keys[0]] });
-        
-        if (!user)
-            return false;
-        await this.userDao.updateUser( { [keys[0]]: body[keys[0]] }, body.data);              
-        return true;
+        try {
+            const user = await this.userDao.getUser({ [keys[0]]: body[keys[0]] });
+            if (!user)
+                throw new  Error("user not exist");
+            await this.userDao.updateUser( { [keys[0]]: body[keys[0]] }, body.data);
+            return { stat: true };           
+        }
+        catch (error) {
+            error.stat = false;
+            return error
+        }
     }
     
     async deleteUser(name)
     {
         try {
             await this.userDao.deleteUser(name);
-            return true;
+            return { stat: true };
         } catch (error) {
-            return false;
+            error.stat = false;
+            return error;
         }
     }
 
     async getUser(username)
     {
-        return await this.userDao.getUser({ username });
+        try {
+            const user = await this.userDao.getUser({ username });
+            return { stat: true, user };
+        } catch (error) {
+            error.stat = false;
+            return error;
+        }
     }
-
+    
     async getUsers()
     {
-        return await this.userDao.getUsers();
+        try {
+            const users = await this.userDao.getUsers();
+            return { stat: true, users };
+        } catch (error) {
+            error.stat = false;
+            return error;
+        }
     }
 }
 

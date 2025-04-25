@@ -19,11 +19,12 @@ class AuthService
     {
         try {
             if (!token)
-                return 400;
+                throw new Error("no token provided");
             jwt.verify(token, process.env.JWT_TOKEN_SECRET || "salam kalam 3alam");
-            return 200;
-        } catch (err) {
-            return 401; 
+            return { stat: true };
+        } catch (error) {
+            error.stat = false
+            return error; 
         }
     }
 
@@ -32,7 +33,6 @@ class AuthService
         const routes = [
             '/signin', '/signup', '/logout', '/google', '/callback', '/get-otp', 'validate-otp'
         ];
-
         return !routes.some(path => url.pathname.endsWith(path));
     }
 
@@ -40,53 +40,74 @@ class AuthService
     {
         let fields = {
             username: user.username,
+        };
+        try {
+            const fetchedUser = await this.userDao.getUser(fields);
+            if (fetchedUser && await bcrypt.compare(user.pass, fetchedUser.pass)) // if user is null, it means the user does not exist
+                return { stat: true };
+            return new Error("username or password is wrrong")
         }
-        const fetchedUser = await this.userDao.getUser(fields);
-        return fetchedUser && await bcrypt.compare(user.pass, fetchedUser.pass); // if user is null, it means the user does not exist
+        catch (error) {
+            error.stat = false;
+            return error
+        }
     }
 
     async canSignUp(user)
     {
         let fields = {
             username: user.username,
-            email: user.email
+            email: user.email,
+        }        
+        try {
+            const fetchedUser = await this.userDao.getUser(fields, ' OR ');
+            if (!fetchedUser)
+                return await userService.addUser(request.body);
+            if (user.username === fetchedUser.username)
+                throw new Error('username already used');
+            throw new Error('email already used');
         }
-        const fetchedUser = await this.userDao.getUser(fields, ' OR ');
-       if (!fetchedUser)
-            return { status: true };
-        if (user.username === fetchedUser.username)
-            return { status: false, error: 'username already used' };
-        return { status: false, error: 'email already used' };
+        catch (error) {
+            error.stat = false;
+            return error
+        }
     }
 
     async sendOTP(body)
     {
-        const user = await this.userDao.getUser({email: body.email})
-        if (!user)
-            throw "no user exit with the provided email";
-        const transporter = nodemailer.createTransport({
-            service: process.env.MAIL_PROVIDER ||'gmail',
-            auth: {
-                user: process.env.PONG_EMAIL,
-                pass: process.env.PONG_PASS
-            }
-        });
-        const otp = Math.floor(Math.random() * 864198 + 123456)  // otp will be between 123456 and 987654
-        //add the  otp in redis instance with an amount of time to expire
+        try {
+            const user = await this.userDao.getUser({email: body.email});
+            if (!user)
+                throw new Error('no user exit with the provided email');
+            const transporter = nodemailer.createTransport({
+                service: process.env.MAIL_PROVIDER ||'gmail',
+                auth: {
+                    user: process.env.PONG_EMAIL,
+                    pass: process.env.PONG_PASS
+                }
+            });
+            const otp = Math.floor(Math.random() * 864198 + 123456);  // otp will be between 123456 and 987654
+            //add the  otp in redis instance with an amount of time to expire
 
-        const mailOptions = {
-            from: `'ping pong' ${process.env.PONG_EMAIL}`,
-            to: body.email,
-            subject: 'restore your password',
-            html: `<h1>${otp}</h1>`
-        };
-        await transporter.sendMail(mailOptions);
+            const mailOptions = {
+                from: `'ping pong' ${process.env.PONG_EMAIL}`,
+                to: body.email,
+                subject: 'restore your password',
+                html: `<h1>${otp}</h1>`
+            };
+            await transporter.sendMail(mailOptions);
+            return { stat: true };
+        } 
+        catch ( error ) {
+            error.stat = false;
+            return error;
+        }
     }
 
     async validOtp(body)
     {
         // verify the otp if it valid or not and expire it if it is valid
-        return true;
+        return { stat: true };
     }
 }
 
