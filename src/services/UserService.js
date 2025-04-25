@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+
 class UserService {
     constructor(userDao)
     {

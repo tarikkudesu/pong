@@ -41,9 +41,14 @@ export default (fastify) => {
                     Authorization: `Bearer ${tokenData.access_token}`
                 }
             });
-
             const user = await userRes.json();
-            await fastify.userService.addUser(user)
+            const formatedUser = {
+                username: user.name,
+                email: user.email,
+                pass: '',
+                avatar: user.picture
+            };
+            await fastify.userService.addUser(formatedUser)
             reply.header('Content-Type', 'text/html').send(`
                 <h2>Welcome, ${user.name}!</h2>
                 <p>Email: ${user.email}</p>
