@@ -1,6 +1,12 @@
 //main controller plugins
 export default async (fastify) => {
     /**
+     * parsers
+     */
+
+    fastify.register(await import('./parsers/x-www-form-urlencoded.js'))
+
+    /**
      * decorators
      */
     fastify.decorate('status_code', (await import('http')).STATUS_CODES)
