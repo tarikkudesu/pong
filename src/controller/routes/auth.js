@@ -1,15 +1,11 @@
 import {signinSchema, signupSchema, logoutSchema} from '../schemas/auth.js'
 
 export default (fastify) => {
-    
-    /**
-     * logic will be implemented later
-     */
 
     fastify.post('/signin', { schema: signinSchema }, async (request, reply) => {   
         if (await fastify.authService.canSignIn(request.body))
         {
-            const token = fastify.authService.generateToken(request.body, process.env.TOKEN_SECRET || "salam kalam 3alam", '60d');
+            const token = fastify.authService.generateToken(request.body, process.env.JWT_TOKEN_SECRET || "salam kalam 3alam", '60d');
             return reply.header('Set-Cookie', `token=${token}; Max-Age=5184000`)
                         .send({message: 'logged successfuly'});
         }
@@ -24,8 +20,9 @@ export default (fastify) => {
             if (check.status)
             {
                 await fastify.userService.addUser(request.body)
-                const token = fastify.authService.generateToken(request.body, process.env.TOKEN_SECRET || "salam kalam 3alam", '60d'); 
-                return reply.header('Set-Cookie', `token=${token}; Max-Age=5184000`);
+                const token = fastify.authService.generateToken(request.body, process.env.JWT_TOKEN_SECRET || "salam kalam 3alam", '60d'); 
+                return reply.header('Set-Cookie', `token=${token}; Max-Age=5184000`)
+                            .send({status: "ok"});
             }
             throw check.error;
         } catch (error) {

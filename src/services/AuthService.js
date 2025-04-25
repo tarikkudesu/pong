@@ -20,7 +20,7 @@ class AuthService
         try {
             if (!token)
                 return 400;
-            jwt.verify(token, process.env.TOKEN_SECRET || "salam kalam 3alam");
+            jwt.verify(token, process.env.JWT_TOKEN_SECRET || "salam kalam 3alam");
             return 200;
         } catch (err) {
             return 401; 

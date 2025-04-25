@@ -7,9 +7,12 @@ class UserDAO
 
     async addUser(user)
     {
+        let fields = Object.keys(user);
+        let prepare = fields.map(key => '?').join(', ');
+        let values = Object.values(user);
         return this.db
-            .prepare("INSERT INTO user(username, email, pass, bio) VALUES (?, ?, ?, ?)")
-            .run(user.username, user.email, user.pass, user.bio);
+            .prepare(`INSERT INTO user(${fields.join(', ')}) VALUES (${prepare})`)
+            .run(values);
     }
 
     async getUsers()

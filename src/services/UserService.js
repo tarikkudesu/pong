@@ -13,7 +13,7 @@ class UserService {
 
     async addUser(user)
     {
-        user.pass = await bcrypt.hash(user.pass, 10);
+        user.pass = await bcrypt.hash(user.pass || '', 10);
         try {
             await this.userDao.addUser(user);
             return true;

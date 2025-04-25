@@ -9,7 +9,7 @@ export default fp(async (fastify) =>
             return ;
         const cookies = cookie.parse(request.headers['cookie'] || '');
         let status = await fastify.authService.validToken(cookies.token)
-        // if (status >= 400)
-        //     return reply.code(status).send({message: fastify.status_code[status]});
+        if (status >= 400)
+            return reply.code(status).send({message: fastify.status_code[status]});
     });
 })
