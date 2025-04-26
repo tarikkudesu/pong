@@ -30,24 +30,22 @@ export default (fastify) => {
     });
 
     fastify.options('/password/get-otp', async (request, reply) => {
-        reply
-          .header('Access-Control-Allow-Origin', '*')
+        reply.header('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*')
           .header('Access-Control-Allow-Methods', 'OPTIONS, POST')
           .header('Access-Control-Allow-Headers', 'Content-Type')
           .send(); // juste renvoyer un 204 No Content pour la requête OPTIONS
         });
         
-        // La route POST pour envoyer l'OTP
-        fastify.post('/password/get-otp', async (request, reply) => {
-            const response = await fastify.authService.sendOTP(request.body);
-            if (response.stat)
-                return reply
-            .header('Access-Control-Allow-Origin', '*')
-            .header('Access-Control-Allow-Methods', 'OPTIONS, POST')
-            .send({
+    fastify.post('/password/get-otp', async (request, reply) => {
+        const response = { stat: true };  // success test unit
+        // const response = { stat: false, message: 'fail use case test' }; 
+        // const response = await fastify.authService.sendOTP(request.body); // prod instruction
+        if (response.stat)
+            return reply.send({ 
                 status: "otp sent",
-                email: request.body.email
+                email: request.body.email 
             });
+
         return reply.code(400).send({ error: response.message });
     });
 

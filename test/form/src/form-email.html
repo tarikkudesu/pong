@@ -139,14 +139,17 @@
             try {
                 const response = await fetch('http://localhost:3000/api/auth/password/get-otp', {
                 method: 'POST',
-                body: new URLSearchParams({
+                headers: {
+                    'Content-type': 'application/json'
+                },
+                body: JSON.stringify({
                     email: document.querySelector('#email').value
                 })
             });
 
             const data = await response.json();
             console.log(data);
-            window.location.href = 'form-otp.html';
+            // window.location.href = 'form-otp.html';
             }
             catch (error) {
                 console.log(error);
