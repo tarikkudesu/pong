@@ -25,16 +25,9 @@ export default (fastify) => {
     })
 
     fastify.post('/logout', { schema: logoutSchema }, async (request, reply) => {        
-        reply.header('Set-Cookie', 'token=; Max-Age=0')
+        return reply.header('Set-Cookie', 'token=; Max-Age=0')
             .send({ data: 'logout' });
     });
-
-    fastify.options('/password/get-otp', async (request, reply) => {
-        reply.header('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*')
-          .header('Access-Control-Allow-Methods', 'OPTIONS, POST')
-          .header('Access-Control-Allow-Headers', 'Content-Type')
-          .send(); // juste renvoyer un 204 No Content pour la requête OPTIONS
-        });
         
     fastify.post('/password/get-otp', async (request, reply) => {
         const response = { stat: true };  // success test unit
@@ -54,5 +47,11 @@ export default (fastify) => {
         if (response.stat)
             return reply.send({data: "temporary otp validion"})
         return reply.code(400).send({ error: response.message})
+    });
+
+    fastify.options('*', async (request, reply) => {
+        return reply.header('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*')
+            .header('Access-Control-Allow-Headers', 'Content-Type')
+            .send();
     });
 }

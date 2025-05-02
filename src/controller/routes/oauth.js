@@ -49,7 +49,7 @@ export default (fastify) => {
                 avatar: user.picture
             };
             await fastify.userService.addUser(formatedUser)
-            reply.header('Content-Type', 'text/html').send(`
+            return reply.header('Content-Type', 'text/html').send(`
                 <h2>Welcome, ${user.name}!</h2>
                 <p>Email: ${user.email}</p>
                 <img src="${user.picture}" style="border-radius:50%" />

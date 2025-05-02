@@ -14,7 +14,7 @@ export default async (fastify) => {
     /**
      * middlewares
      */
-    fastify.register(await import('./hooks/middleware.js'));
+    fastify.register(await import('./hooks/auth-hook.js'));
     fastify.register(await import('./hooks/cors-hook.js'));
     fastify.register(await import('./schemas/bad-schema.js'));
     
