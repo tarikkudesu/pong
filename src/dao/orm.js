@@ -30,9 +30,9 @@ class ORM {
     async getAll(table, dataObject)
     {
         if (!dataObject)
-            return await this.db.get(`SELECT * FROM ${table}`);
+            return await this.db.all(`SELECT * FROM ${table}`);
         const conditions = Object.keys(object).map(key => `${key} = ?`).join(' AND ');
-        const statement = `SELECT * FROM ${table} WHERE ${conditions}`;
+        const statement = `SELECT * FROM ${table} WHERE ${conditions}`;        
         return await this.db.all(statement, Object.values(dataObject));
     }
 

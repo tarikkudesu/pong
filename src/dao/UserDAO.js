@@ -7,42 +7,27 @@ class UserDAO
 
     async addUser(user)
     {
-        let fields = Object.keys(user);
-        let prepare = fields.map(key => '?').join(', ');
-        let values = Object.values(user);
-        return this.db
-            .prepare(`INSERT INTO user(${fields.join(', ')}) VALUES (${prepare})`)
-            .run(values);
+        return await this.db.insert('user', user);
     }
 
     async getUsers()
     {
-        return this.db.prepare('SELECT * FROM user').all()
+        return await this.db.getAll('user');
     }
 
-    async getUser(fields, union = " AND ")
+    async getUser(fields)
     {
-        let conditions = Object.keys(fields).map(key => `${key} = ?`).join(union);
-        let query = `SELECT * FROM user WHERE ${conditions}`;
-        return this.db.prepare(query).get(Object.values(fields));
+        return await this.db.getOne('user', fields);
     }
 
     async deleteUser(username)
     {
-        this.db
-            .prepare(`DELETE FROM user WHERE username = ?`)
-            .run(username);
+        this.db.delete('user', { username });
     }
     
     async updateUser(field, user)
     {
-        let conditions = Object.keys(user).map(key => `${key} = ?`).join(', ');
-        let values = Object.values(user);
-        let key = Object.keys(field)[0]
-        values.push(field[key]);
-        return this.db
-            .prepare(`UPDATE user SET ${conditions} WHERE ${key} = ?`)
-            .run(values);
+        return await this.db.update('user', user, field)
     }    
 }
 
