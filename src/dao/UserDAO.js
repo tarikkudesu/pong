@@ -10,21 +10,21 @@ class UserDAO
         return await this.db.insert('user', user);
     }
 
-    async getUsers()
+    async getUsers(criteria, fetchedFields)
     {
-        return await this.db.getAll('user');
+        return await this.db.getAll('user', criteria, fetchedFields);
     }
 
-    async getUser(fields)
+    async getUser(criteria, fetchedFields)
     {
-        return await this.db.getOne('user', fields);
+        return await this.db.getOne('user',criteria, fetchedFields);
     }
 
     async deleteUser(username)
     {
         this.db.delete('user', { username });
     }
-    
+
     async updateUser(field, user)
     {
         return await this.db.update('user', user, field)

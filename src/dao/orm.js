@@ -20,20 +20,27 @@ class ORM {
         await this.db.run(statement, Object.values(dataObject));
     }
 
-    async getOne(table, dataObject)
+    async getOne(table, criteria, fetchedFields)
     {
-        const conditions = Object.keys(dataObject).map(key => `${key} = ?`).join(' AND ');
-        const statement = `SELECT * FROM ${table} WHERE ${conditions}`;
-        return await this.db.get(statement, Object.values(dataObject));
+        const selected = fetchedFields.length ? fetchedFields.join(', ') : '*';
+        const conditions = Object.keys(criteria).map(key => `${key} = ?`).join(' AND ');
+        const statement = `SELECT ${selected} FROM ${table} WHERE ${conditions}`;
+        return await this.db.get(statement, Object.values(criteria));
     }
 
-    async getAll(table, dataObject)
+    async getAll(table, criteria, fetchedFields)
     {
-        if (!dataObject)
-            return await this.db.all(`SELECT * FROM ${table}`);
-        const conditions = Object.keys(object).map(key => `${key} = ?`).join(' AND ');
-        const statement = `SELECT * FROM ${table} WHERE ${conditions}`;        
-        return await this.db.all(statement, Object.values(dataObject));
+        let statement;
+        const selected = fetchedFields.length ? fetchedFields.join(', ') : '*';
+        if (criteria)
+        {
+            const conditions = Object.keys(criteria).map(key => `${key} = ?`).join(' AND ');
+            statement = `SELECT ${selected} FROM ${table} WHERE ${conditions}`;
+            return await this.db.all(statement, Object.values(criteria));
+        }
+        statement = `SELECT ${selected} FROM ${table}`;
+        return await this.db.all(statement);
+
     }
 
     async update(table, dataObject, creteriaObject)

@@ -19,7 +19,7 @@ class UserService {
             email: user.email,
         };
         try {
-            formatedUser.pass = await bcrypt.hash(user.pass || '', 10)
+            formatedUser.pass = await bcrypt.hash(user.pass || '', 10) // empty pass in case of OAuth
             await this.userDao.addUser(formatedUser);
             return { stat: true };
         } catch (error) {
@@ -43,7 +43,7 @@ class UserService {
             return error
         }
     }
-    
+
     async deleteUser(name)
     {
         try {
@@ -55,21 +55,21 @@ class UserService {
         }
     }
 
-    async getUser(username)
+    async getUser(username, ...fetchedFields)
     {
         try {
-            const user = await this.userDao.getUser({ username });
+            const user = await this.userDao.getUser({ username }, fetchedFields);
             return { stat: true, user };
         } catch (error) {
             error.stat = false;
             return error;
         }
     }
-    
-    async getUsers()
+
+    async getUsers(criteria, ...fetchedFields)
     {
         try {
-            const users = await this.userDao.getUsers();
+            const users = await this.userDao.getUsers(criteria, fetchedFields);
             return { stat: true, users };
         } catch (error) {
             error.stat = false;
