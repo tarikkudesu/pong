@@ -4,10 +4,10 @@ import nodemailer from 'nodemailer';
 
 class AuthService
 {
-    constructor(authDao, userDao)
+    constructor(authDao, userService)
     {
         this.authDao = authDao;
-        this.userDao = userDao;
+        this.userService = userService;
     }
 
     generateToken(payload, secretKey, expiresIn = '1h')
@@ -36,14 +36,11 @@ class AuthService
         return !routes.some(path => url.pathname.endsWith(path));
     }
 
-    async canSignIn(user)
+    async canSignIn(body)
     {
-        let fields = {
-            username: user.username,
-        };
         try {
-            const fetchedUser = await this.userDao.getUser(fields);
-            if (fetchedUser && await bcrypt.compare(user.pass, fetchedUser.pass)) // if user is null, it means the user does not exist
+            const { user } = await this.userService.getUser(body.username);
+            if (user && await bcrypt.compare(body.pass, user.pass)) // if user is null, it means the user does not exist
                 return { stat: true };
             return new Error("username or password is wrrong")
         }
@@ -53,17 +50,13 @@ class AuthService
         }
     }
 
-    async canSignUp(user)
-    {
-        let fields = {
-            username: user.username,
-            email: user.email,
-        }        
+    async canSignUp(body)
+    {     
         try {
-            const fetchedUser = await this.userDao.getUser(fields, ' OR ');
-            if (!fetchedUser)
-                return await userService.addUser(request.body);
-            if (user.username === fetchedUser.username)
+            const serviceResult = await this.userService.getUser(body.username);
+            if (!serviceResult.user)
+                return await this.userService.addUser(body);
+            if (serviceResult.user.username === body.username)
                 throw new Error('username already used');
             throw new Error('email already used');
         }
@@ -76,7 +69,7 @@ class AuthService
     async sendOTP(body)
     {
         try {
-            const user = await this.userDao.getUser({email: body.email});
+            const { user } = await this.userService.getUser({email: body.email});
             if (!user)
                 throw new Error('no user exit with the provided email');
             const transporter = nodemailer.createTransport({

@@ -6,8 +6,16 @@ import { AuthService } from './AuthService.js';
 // import { GameService } from './GameService.js';
 
 export default fp(async (fastify) => {
-    fastify.decorate('userService', new UserService(fastify.userDao));
-    fastify.decorate('authService', new AuthService(fastify.authDao, fastify.userDao));
+    /**
+     * user service is the most used service to fetch data related to the users
+     * so that all services can share the same UserService object
+     * */
+    const userService = new UserService(fastify.userDao);
+
+    
+    
+    fastify.decorate('userService', userService);
+    fastify.decorate('authService', new AuthService(fastify.authDao, userService));
     // fastify.decorate('friendService', new FriendService(fastify.friendDao));
     // fastify.decorate('chatService', new ChatService(fastify.chatDao));
     // fastify.decorate('gameService', new GameService(fastify.gameDao));
