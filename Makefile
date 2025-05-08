@@ -2,20 +2,30 @@ NETWORKS		=	$$(docker network ls -q)
 IMAGES			=	$$(docker image ls -q)
 VOLUMES			=	$$(docker volume ls -q)
 CONTAINERS		=	$$(docker ps -aq)
+CONTAINER_NAME	=	pong
+CONTAINER_TAG	=	oo
 
-all: build up exec
+all: build run
 
 build :
-	docker $@ -t pong:oo .
+	docker $@ -t $(CONTAINER_NAME):$(CONTAINER_TAG) .
 
-run:
-	@docker $@ -it -d --name pong --rm -v ./:/app -p 3000:3000 pong:oo
+run :
+	@docker $@ --init -it --name pong --rm -v ./:/app -p 3000:3000 $(CONTAINER_NAME):$(CONTAINER_TAG)
 
-exec:
-	@docker $@ -it pong zsh
+exec :
+	@docker $@ -it $(CONTAINER_NAME) zsh
 
-rmcontainers:
-	@docker stop $(CONTAINERS) > /dev/null 2>&1 || true
+stop :
+	@docker $@ $(CONTAINERS) > /dev/null 2>&1 || true
+
+top:
+	@docker $@ $(CONTAINER_NAME)
+
+stats:
+	@docker $@ $(CONTAINER_NAME)
+
+rmcontainers: stop
 	@docker rm $(CONTAINERS) > /dev/null 2>&1 || true
 
 rmimages:
@@ -36,4 +46,4 @@ fclean: clean rmimages
 
 re: fclean all
 
-.PHONY: build run exec rmcontainers rmimages rmnetworks rmvolumes prune
+.PHONY: build run exec top stop rmcontainers rmimages rmnetworks rmvolumes prune
