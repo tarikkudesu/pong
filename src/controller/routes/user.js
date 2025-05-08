@@ -7,13 +7,15 @@ export default (fastify) => {
      */
     
     fastify.post('/update', async (request, reply) => {
+        
         let response = await fastify.userService.updateUser(request.body)
         if (response.stat)
             return reply.code(201).send({ user:  request.body.data });
-        return reply.code(400).send({ error: error.message });
+        return reply.code(400).send({ error: response.message });
     });
     
     fastify.get('/', async (request, reply) => {
+        
         const response = await fastify.userService.getUsers();
         if (response.stat)
             return reply.send({ data: response.users });
@@ -21,7 +23,7 @@ export default (fastify) => {
     });
     
     fastify.get('/:username', async (request, reply) => {
-        const response = await fastify.userService.getUser(req.params.username);
+        const response = await fastify.userService.getUser(request.params.username);
         if (response.stat)
             return reply.send({ data: response.user });
         return reply.code(400).send({ error: response.message });
