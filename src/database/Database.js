@@ -10,25 +10,24 @@ class Database {
         fs.readdirSync(path).forEach(file => {
             try {
                 const sql = fs.readFileSync(path + file, 'utf-8');
-                this.db.exec(sql).then(result => {})
+                this.#db.exec(sql).then(result => {})
                 .catch(err => console.error(`Error executing SQL from file ${file}:`, err.message));
             } catch (err) {
                 console.error(`Error reading file ${file}:`, err);
             }
         });
     }
-    
-    
+
     static async getDBInstance(path)
     {
-        if (!Database.db)
+        if (!Database.#db)
         {
-            Database.db = await open({
+            Database.#db = await open({
                 filename: path,
                 driver: sqlite3.Database,
             });
         }
-        return Database.db;
+        return Database.#db;
     }
 
     static close()

@@ -8,9 +8,9 @@ class ORM {
 
     static async getORMInstance()
     {
-        this.db = await Database.getDBInstance('./src/database/pong.sqlite');
+        const db = await Database.getDBInstance('./src/database/pong.sqlite');
         Database.loadTables('./src/database/sql/');
-        return new ORM(this.db);
+        return new ORM(db);
     }
 
     async delete(table, dataObject)
@@ -22,7 +22,7 @@ class ORM {
 
     async getOne(table, criteria, fetchedFields)
     {
-        const selected = fetchedFields.length ? fetchedFields.join(', ') : '*';
+        const selected = fetchedFields && fetchedFields.length ? fetchedFields.join(', ') : '*';
         const conditions = Object.keys(criteria).map(key => `${key} = ?`).join(' AND ');
         const statement = `SELECT ${selected} FROM ${table} WHERE ${conditions}`;
         return await this.db.get(statement, Object.values(criteria));

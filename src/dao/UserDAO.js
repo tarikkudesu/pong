@@ -20,9 +20,9 @@ class UserDAO
         return await this.db.getOne('user',criteria, fetchedFields);
     }
 
-    async deleteUser(username)
+    async deleteUser(user)
     {
-        this.db.delete('user', { username });
+        this.db.delete('user', user);
     }
 
     async updateUser(field, user)

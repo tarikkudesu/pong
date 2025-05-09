@@ -30,12 +30,11 @@ class UserService {
 
     async updateUser(body)
     {
-        const keys = Object.keys(body);
         try {
-            const user = await this.userDao.getUser({ [keys[0]]: body[keys[0]] });
+            const user = await this.userDao.getUser(body.filter);
             if (!user)
                 throw new  Error("user not exist");
-            await this.userDao.updateUser( { [keys[0]]: body[keys[0]] }, body.data);
+            await this.userDao.updateUser( body.filter, body.data);
             return { stat: true };           
         }
         catch (error) {
@@ -44,10 +43,10 @@ class UserService {
         }
     }
 
-    async deleteUser(name)
+    async deleteUser(user)
     {
         try {
-            await this.userDao.deleteUser(name);
+            await this.userDao.deleteUser(user);
             return { stat: true };
         } catch (error) {
             error.stat = false;
@@ -58,7 +57,7 @@ class UserService {
     async getUser(username, ...fetchedFields)
     {
         try {
-            const user = await this.userDao.getUser({ username }, fetchedFields);
+            const user = await this.userDao.getUser(username, fetchedFields);
             return { stat: true, user };
         } catch (error) {
             error.stat = false;
@@ -68,6 +67,9 @@ class UserService {
 
     async getUsers(criteria, ...fetchedFields)
     {
+        // return {stat: true, data: fetchedFields};
+        console.log(criteria, fetchedFields);
+        
         try {
             const users = await this.userDao.getUsers(criteria, fetchedFields);
             return { stat: true, users };
