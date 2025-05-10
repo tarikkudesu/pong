@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index"
+    "dev": "eslint . && nodemon index"
   },
   "keywords": [],
   "author": "",
@@ -18,13 +18,20 @@
     "fastify-plugin": "^5.0.1",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.10.1",
-    "redis": "^4.7.0"
+    "redis": "^4.7.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "@eslint/js": "^9.26.0",
+    "@fastify/swagger-ui": "^5.2.2",
     "@types/node": "^22.14.1",
     "dotenv": "^16.5.0",
+    "eslint": "^9.26.0",
+    "globals": "^16.1.0",
     "nodemon": "^3.1.10",
     "pino-pretty": "^13.0.0",
+    "swagger": "^0.7.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   }
