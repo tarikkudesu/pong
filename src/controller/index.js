@@ -14,9 +14,9 @@ export default async (fastify) => {
     /**
      * middlewares
      */
-    fastify.register(await import('./hooks/middleware.js'));
+    // fastify.register(await import('./hooks/middleware.js'));
     fastify.register(await import('./hooks/cors-hook.js'));
-    fastify.register(await import('./schemas/bad-schema.js'));
+    // fastify.register(await import('./schemas/bad-schema.js'));
     
 
     /**
@@ -27,4 +27,5 @@ export default async (fastify) => {
     fastify.register(await import('./routes/oauth.js'), {prefix: '/api/oauth'});
     fastify.register(await import('./routes/friend.js'), {prefix: '/api/friend'});
     fastify.register(await import('./routes/chat.js'), {prefix: '/api/chat'});
+    fastify.register(await import('./routes/game.js'), {prefix: '/api/game'});
 }

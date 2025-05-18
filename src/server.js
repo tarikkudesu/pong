@@ -15,7 +15,8 @@ class Server {
          * the order of the layers is important, due to its architecture nature.
          * dao layer used by service leyer which is used by the controller
          */
-        
+        this.fastify.register(await import('@fastify/websocket'));
+		this.fastify.register(await import('@fastify/cors'), { origin: '*' });
           
         this.fastify.register(await import('./dao/index.js'));
         this.fastify.register(await import('./services/index.js'));
@@ -26,7 +27,7 @@ class Server {
     {
         this.fastify.listen({
             port : process.env.SERVER_PORT || 3000,
-            host: process.env.SERVER_HOST || '127.0.0.1', 
+            host: process.env.SERVER_HOST || '0.0.0.0', 
         });
     }
 
