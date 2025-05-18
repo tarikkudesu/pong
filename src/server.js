@@ -6,7 +6,7 @@ class Server {
         /**
          * fastify instance
          */
-        this.fastify =  Fastify({ logger });
+        this.fastify =  Fastify();
     }
 
     async registerPlugins()

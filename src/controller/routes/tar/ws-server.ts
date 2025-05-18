@@ -1,28 +1,37 @@
 import { Ball, Vector, Paddle } from './game/index.js';
+import { mdb } from './mdb.js';
+import { WebSocket } from 'ws';
+
+declare module 'ws' {
+	interface WebSocket {
+		username: string;
+		hash: string;
+	}
+}
 
 import _ from 'lodash';
 
 // ! shared ------------------------------------------------------------------------------------------
 interface MessageProps {
-	event: string;
-	object: any;
+	message: string;
+	data: any;
 }
 export class Message {
 	public message: string;
 	public data: string;
-	constructor({ event, object }: MessageProps) {
-		this.message = event;
-		this.data = JSON.stringify(object);
+	constructor({ message, data }: MessageProps) {
+		this.message = message;
+		this.data = JSON.stringify(data);
 	}
-	static instance = new Message({ event: '', object: {} });
+	static instance = new Message({ message: '', data: {} });
 }
 
 export class Pooler {
 	public username: string;
-	public profile: string;
-	constructor(username: string, profile: string) {
+	public img: string;
+	constructor(username: string, img: string) {
 		this.username = username;
-		this.profile = profile;
+		this.img = img;
 	}
 	static instance = new Pooler('', '');
 }
@@ -248,37 +257,86 @@ class WSS {
 	// ? Protocole Message Builders
 
 	ErrorMessage(error: string) {
-		return JSON.stringify(new Message({ event: 'ERROR', object: new WSError(error) }));
+		return JSON.stringify(new Message({ message: 'ERROR', data: new WSError(error) }));
 	}
 
 	// * POOL
 	HashMessage(username: string, img: string, hash: string): string {
-		return JSON.stringify(new Message({ event: 'Hash', object: new Hash(username, img, hash) }));
+		return JSON.stringify(new Message({ message: 'Hash', data: new Hash(username, img, hash) }));
 	}
 	PoolMessage(getPoolers: () => Pooler[]): string {
-		return JSON.stringify(new Message({ event: 'POOL', object: new Pool(getPoolers()) }));
+		return JSON.stringify(new Message({ message: 'POOL', data: new Pool(getPoolers()) }));
 	}
 	InvitationMessage(getInvitions: () => Invitation[]): string {
-		return JSON.stringify(new Message({ event: 'INVITATIONS', object: new Invitations(getInvitions()) }));
+		return JSON.stringify(new Message({ message: 'INVITATIONS', data: new Invitations(getInvitions()) }));
 	}
 	// * GAME
 	StartMessage(): string {
-		return JSON.stringify(new Message({ event: 'START', object: new Start() }));
+		return JSON.stringify(new Message({ message: 'START', data: new Start() }));
 	}
 	StopMessage(): string {
-		return JSON.stringify(new Message({ event: 'STOP', object: new Stop() }));
+		return JSON.stringify(new Message({ message: 'STOP', data: new Stop() }));
 	}
 	FrameMessage(ball: Ball, rightPaddle: Paddle, leftPaddle: Paddle) {
-		return JSON.stringify(new Message({ event: 'FRAME', object: new Frame(ball, rightPaddle, leftPaddle) }));
+		return JSON.stringify(new Message({ message: 'FRAME', data: new Frame(ball, rightPaddle, leftPaddle) }));
 	}
 	ScoreMessage(player: number, opponent: number): string {
-		return JSON.stringify(new Message({ event: 'SCORE', object: new Score(player, opponent) }));
+		return JSON.stringify(new Message({ message: 'SCORE', data: new Score(player, opponent) }));
 	}
 	LostMessage(): string {
-		return JSON.stringify(new Message({ event: 'LOST', object: new Lost() }));
+		return JSON.stringify(new Message({ message: 'LOST', data: new Lost() }));
 	}
 	WonMessage(): string {
-		return JSON.stringify(new Message({ event: 'WON', object: new Won() }));
+		return JSON.stringify(new Message({ message: 'WON', data: new Won() }));
+	}
+
+	/************************************************************************************************************************
+	 *                                                        PARSER                                                        *
+	 ************************************************************************************************************************/
+	useParser(json: string, socket: WebSocket) {
+		const { message, data } = this.Json({ message: json, target: Message.instance });
+		switch (message) {
+			case 'CONNECT': {
+				// TODO: handle connect GAME
+				// ? connect.page = 'MAIN' | 'GAME';
+				const connect: Connect = this.Json({ message: data, target: Connect.instance });
+				if (connect.page === 'MAIN') mdb.addPlayer(connect.username, connect.img, socket);
+				break;
+			}
+			case 'INVITE': {
+				// TODO: handle invite
+				const invite: Invite = this.Json({ message: data, target: Invite.instance });
+				mdb.createInvitation(invite.sender, invite.recipient);
+				break;
+			}
+			case 'ACCEPT': {
+				// TODO: handle accept
+				const accept: Accept = this.Json({ message: data, target: Accept.instance });
+				mdb.acceptInvitation(accept.sender, accept.recipient);
+				break;
+			}
+			case 'REJECT': {
+				// TODO: handle reject
+				const reject: Reject = this.Json({ message: data, target: Reject.instance });
+				mdb.declineInvitation(reject.sender, reject.recipient);
+				break;
+			}
+			case 'DELETE': {
+				// TODO: handle delete
+				const deleteInvite: Delete = this.Json({ message: data, target: Delete.instance });
+				if (deleteInvite.recipient === '*') mdb.deleteAllRejectedInvitations(deleteInvite.sender);
+				else mdb.deleteRejectedInvitation(deleteInvite.sender, deleteInvite.recipient);
+				break;
+			}
+			default:
+				throw new Error('Invalid JSON');
+		}
+	}
+	closeSocket(socket: WebSocket) {
+		if (socket.username) {
+			mdb.removePlayer(socket.username);
+			mdb.deleteAllRejectedInvitations(socket.username);
+		}
 	}
 }
 
