@@ -1,5 +1,5 @@
 import { Ball, Vector, Paddle } from './game/index.js';
-import { mdb } from './mdb.js';
+import { Invitation, mdb } from './mdb.js';
 import { WebSocket } from 'ws';
 
 declare module 'ws' {
@@ -34,14 +34,6 @@ export class Pooler {
 		this.img = img;
 	}
 	static instance = new Pooler('', '');
-}
-
-export class Invitation {
-	public username: string = '';
-	public img: string = '';
-	public invite_status: string = '';
-	constructor() {}
-	static instance = new Invitation();
 }
 
 export class WSError {
@@ -306,6 +298,7 @@ class WSS {
 			case 'INVITE': {
 				// TODO: handle invite
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
+				console.log(invite);
 				mdb.createInvitation(invite.sender, invite.recipient);
 				break;
 			}
@@ -331,11 +324,12 @@ class WSS {
 			default:
 				throw new Error('Invalid JSON');
 		}
+		mdb.main();
 	}
 	closeSocket(socket: WebSocket) {
 		if (socket.username) {
 			mdb.removePlayer(socket.username);
-			mdb.deleteAllRejectedInvitations(socket.username);
+			mdb.cancelAllPlayerInvitations(socket.username);
 		}
 	}
 }

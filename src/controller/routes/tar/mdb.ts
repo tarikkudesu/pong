@@ -136,7 +136,7 @@ class Mdb {
 			})
 			.filter((player): player is { username: string; img: string } => Boolean(player));
 	}
-	getAllOtherPlayersWithInviteStatus(username: string) {
+	getAllOtherPlayersWithInviteStatus(username: string): Pooler[] {
 		const player: Player = this.getPlayer(username);
 		return [...this.players.values()]
 			.map((ele) => {
@@ -192,11 +192,9 @@ class Mdb {
 	// * delete all expired invitation
 	// TODO: CLIENT UPDATE
 	deleteExpiredInvitations() {
-		console.log([...this.invitations.values()]);
 		[...this.invitations.values()].forEach((ele) => {
 			if (Date.now() - ele.created_at > invitationTimeout) this.invitations.delete(ele.sender + ele.recipient);
 		});
-		console.log([...this.invitations.values()]);
 	}
 	// * cancel invitation
 	// TODO: CLIENT UPDATE
@@ -232,6 +230,7 @@ class Mdb {
 		this.invitations.clear();
 	}
 	getAllInvitations() {
+		console.warn('not ideal, use getAllPlayerInvitations() instead');
 		return [...this.invitations.values()].map((ele) => ({
 			sender: ele.sender,
 			recipient: ele.recipient,
@@ -239,7 +238,7 @@ class Mdb {
 			img: ele.img,
 		}));
 	}
-	getAllPlayerInvitations(username: string) {
+	getAllPlayerInvitations(username: string): Invitation[] {
 		if (!this.checkIfPlayerExists(username)) throw new Error("player doesn't exist");
 		return [...this.invitations.values()]
 			.map((ele) => {
@@ -248,11 +247,22 @@ class Mdb {
 						sender: ele.sender,
 						recipient: ele.recipient,
 						invite_status: ele.invite_status,
+						created_at: ele.created_at,
 						img: ele.img,
 					};
 				return undefined;
 			})
-			.filter(Boolean);
+			.filter(
+				(
+					invite
+				): invite is {
+					sender: string;
+					recipient: string;
+					invite_status: 'pending' | 'accepted' | 'declined';
+					img: string;
+					created_at: number;
+				} => Boolean(invite)
+			) as Invitation[];
 	}
 	getInvitation(sender: Player, recipient: Player): Invitation {
 		const invite: Invitation | undefined = this.invitations.get(sender.username + recipient.username);
@@ -269,7 +279,8 @@ class Mdb {
 		// TODO: Loop over all players and send their data
 		[...this.players.values()].forEach((ele) => {
 			if (ele.socket.readyState === WebSocket.OPEN) {
-				ele.socket.send(WS.PoolMessage(() => this.getAllOtherPlayers(ele.username)));
+				ele.socket.send(WS.PoolMessage(() => this.getAllOtherPlayersWithInviteStatus(ele.username)));
+				ele.socket.send(WS.InvitationMessage(() => this.getAllPlayerInvitations(ele.username)));
 			}
 		});
 	}
