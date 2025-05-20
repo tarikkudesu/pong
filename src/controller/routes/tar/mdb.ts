@@ -3,7 +3,7 @@ import { WebSocket } from 'ws';
 import { Pong } from './game/index.js';
 import { Pooler, WS } from './ws-server.js';
 
-export const invitationTimeout: number = 60;
+export const invitationTimeout: number = 30000;
 
 export function generateHash(text: string): string {
 	return crypto.createHash('sha256').update(text).digest('hex');
@@ -169,7 +169,7 @@ class Mdb {
 		if (sen.username === rec.username) throw new Error('invited yourself, pretty smart huh!!');
 		if (this.invitations.get(sen.username + rec.username))
 			throw new Error('stop trying to send invitation to this player, he already got one from you');
-		this.invitations.set(sen.username + rec.username, new Invitation(sen.username, rec.username, rec.img));
+		this.invitations.set(sen.username + rec.username, new Invitation(sen.username, rec.username, sen.img));
 	}
 	// * update accepted invitation
 	// TODO: CLIENT UPDATE
@@ -193,7 +193,10 @@ class Mdb {
 	// TODO: CLIENT UPDATE
 	deleteExpiredInvitations() {
 		[...this.invitations.values()].forEach((ele) => {
-			if (Date.now() - ele.created_at > invitationTimeout) this.invitations.delete(ele.sender + ele.recipient);
+			if (Date.now() - ele.created_at > invitationTimeout) {
+				this.invitations.delete(ele.sender + ele.recipient);
+				this.updateClient();
+			}
 		});
 	}
 	// * cancel invitation
@@ -242,7 +245,7 @@ class Mdb {
 		if (!this.checkIfPlayerExists(username)) throw new Error("player doesn't exist");
 		return [...this.invitations.values()]
 			.map((ele) => {
-				if (ele.sender === username)
+				if (ele.recipient === username)
 					return {
 						sender: ele.sender,
 						recipient: ele.recipient,
@@ -274,8 +277,11 @@ class Mdb {
 	/************************************************************************************************************************
 	 *                                                         MAIN                                                         *
 	 ************************************************************************************************************************/
-	main() {
+
+	updateMdb() {
 		this.deleteExpiredInvitations();
+	}
+	updateClient() {
 		// TODO: Loop over all players and send their data
 		[...this.players.values()].forEach((ele) => {
 			if (ele.socket.readyState === WebSocket.OPEN) {
@@ -287,5 +293,3 @@ class Mdb {
 }
 
 export const mdb = new Mdb();
-
-export function main() {}

@@ -324,13 +324,19 @@ class WSS {
 			default:
 				throw new Error('Invalid JSON');
 		}
-		mdb.main();
+		mdb.updateClient();
 	}
 	closeSocket(socket: WebSocket) {
 		if (socket.username) {
 			mdb.removePlayer(socket.username);
 			mdb.cancelAllPlayerInvitations(socket.username);
 		}
+		mdb.updateClient();
+	}
+	main() {
+		setInterval(() => {
+			mdb.updateMdb();
+		}, 1000 / 60);
 	}
 }
 
