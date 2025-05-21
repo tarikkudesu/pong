@@ -1,5 +1,5 @@
 import { Ball, Vector, Paddle } from './game/index.js';
-import { Invitation, mdb } from './mdb.js';
+import { mdb } from './mdb.js';
 import { WebSocket } from 'ws';
 
 declare module 'ws' {
@@ -12,6 +12,7 @@ declare module 'ws' {
 import _ from 'lodash';
 
 // ! shared ------------------------------------------------------------------------------------------
+
 interface MessageProps {
 	message: string;
 	data: any;
@@ -26,16 +27,6 @@ export class Message {
 	static instance = new Message({ message: '', data: {} });
 }
 
-export class Pooler {
-	public username: string;
-	public img: string;
-	constructor(username: string, img: string) {
-		this.username = username;
-		this.img = img;
-	}
-	static instance = new Pooler('', '');
-}
-
 export class WSError {
 	public message: string;
 	constructor(error: string) {
@@ -44,13 +35,10 @@ export class WSError {
 	static instance = new WSError('');
 }
 
-// ! res ------------------------------------------------------------------------------------------
-
-// * Pool
 export class Hash {
-	public username: string;
 	public img: string;
 	public hash: string;
+	public username: string;
 	constructor(username: string, img: string, hash: string) {
 		this.username = username;
 		this.hash = hash;
@@ -59,17 +47,45 @@ export class Hash {
 	static instance = new Hash('', '', '');
 }
 
+export class ClientPlayer {
+	public img: string;
+	public username: string;
+	public invite_status: 'unsent' | 'pending' | 'accepted' | 'declined';
+	constructor(username: string, img: string, invite_status: 'unsent' | 'pending' | 'accepted' | 'declined') {
+		this.invite_status = invite_status;
+		this.username = username;
+		this.img = img;
+	}
+	static instance = new ClientPlayer('', '', 'unsent');
+}
+
+export class ClientInvitation {
+	public img: string;
+	public sender: string;
+	public invite_status: 'unsent' | 'pending' | 'accepted' | 'declined';
+	constructor(sender: string, img: string, invite_status: 'unsent' | 'pending' | 'accepted' | 'declined') {
+		this.invite_status = invite_status;
+		this.sender = sender;
+		this.img = img;
+	}
+	static instance = new ClientInvitation('', '', 'unsent');
+}
+
+// ! res ------------------------------------------------------------------------------------------
+
+// * Pool
+
 export class Pool {
-	public pool: Pooler[];
-	constructor(pool: Pooler[]) {
+	public pool: ClientPlayer[];
+	constructor(pool: ClientPlayer[]) {
 		this.pool = pool;
 	}
 	static instance = new Pool([]);
 }
 
 export class Invitations {
-	public invitations: Invitation[];
-	constructor(invitations: Invitation[]) {
+	public invitations: ClientInvitation[];
+	constructor(invitations: ClientInvitation[]) {
 		this.invitations = invitations;
 	}
 	static instance = new Invitations([]);
@@ -156,10 +172,10 @@ export class Won {
 // * Pool
 export class Connect {
 	// TODO: initial game data can be added here
-	username: string;
 	img: string;
 	page: string;
 	query: string;
+	username: string;
 	constructor(username: string, img: string, page: string, query: string) {
 		this.username = username;
 		this.query = query;
@@ -177,36 +193,6 @@ export class Invite {
 		this.recipient = recipient;
 	}
 	public static instance = new Invite('', '');
-}
-
-export class Accept {
-	sender: string;
-	recipient: string;
-	constructor(sender: string, recipient: string) {
-		this.sender = sender;
-		this.recipient = recipient;
-	}
-	public static instance = new Accept('', '');
-}
-
-export class Reject {
-	sender: string;
-	recipient: string;
-	constructor(sender: string, recipient: string) {
-		this.sender = sender;
-		this.recipient = recipient;
-	}
-	public static instance = new Reject('', '');
-}
-
-export class Delete {
-	sender: string;
-	recipient: string;
-	constructor(sender: string, recipient: string) {
-		this.sender = sender;
-		this.recipient = recipient;
-	}
-	public static instance = new Delete('', '');
 }
 
 // * Game
@@ -256,10 +242,10 @@ class WSS {
 	HashMessage(username: string, img: string, hash: string): string {
 		return JSON.stringify(new Message({ message: 'Hash', data: new Hash(username, img, hash) }));
 	}
-	PoolMessage(getPoolers: () => Pooler[]): string {
-		return JSON.stringify(new Message({ message: 'POOL', data: new Pool(getPoolers()) }));
+	PoolMessage(getClientPlayers: () => ClientPlayer[]): string {
+		return JSON.stringify(new Message({ message: 'POOL', data: new Pool(getClientPlayers()) }));
 	}
-	InvitationMessage(getInvitions: () => Invitation[]): string {
+	InvitationMessage(getInvitions: () => ClientInvitation[]): string {
 		return JSON.stringify(new Message({ message: 'INVITATIONS', data: new Invitations(getInvitions()) }));
 	}
 	// * GAME
@@ -292,33 +278,37 @@ class WSS {
 				// TODO: handle connect GAME
 				// ? connect.page = 'MAIN' | 'GAME';
 				const connect: Connect = this.Json({ message: data, target: Connect.instance });
+				console.log("CONNECT", connect);
 				if (connect.page === 'MAIN') mdb.addPlayer(connect.username, connect.img, socket);
 				break;
 			}
 			case 'INVITE': {
 				// TODO: handle invite
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log(invite);
+				console.log("INVITE", invite);
 				mdb.createInvitation(invite.sender, invite.recipient);
 				break;
 			}
 			case 'ACCEPT': {
 				// TODO: handle accept
-				const accept: Accept = this.Json({ message: data, target: Accept.instance });
-				mdb.acceptInvitation(accept.sender, accept.recipient);
+				const invite: Invite = this.Json({ message: data, target: Invite.instance });
+				console.log("ACCEPT", invite);
+				mdb.acceptInvitation(invite.sender, invite.recipient);
 				break;
 			}
 			case 'REJECT': {
 				// TODO: handle reject
-				const reject: Reject = this.Json({ message: data, target: Reject.instance });
-				mdb.declineInvitation(reject.sender, reject.recipient);
+				const invite: Invite = this.Json({ message: data, target: Invite.instance });
+				console.log("REJECT", invite);
+				mdb.declineInvitation(invite.sender, invite.recipient);
 				break;
 			}
 			case 'DELETE': {
 				// TODO: handle delete
-				const deleteInvite: Delete = this.Json({ message: data, target: Delete.instance });
-				if (deleteInvite.recipient === '*') mdb.deleteAllRejectedInvitations(deleteInvite.sender);
-				else mdb.deleteRejectedInvitation(deleteInvite.sender, deleteInvite.recipient);
+				const invite: Invite = this.Json({ message: data, target: Invite.instance });
+				console.log("DELETE", invite);
+				if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(invite.sender);
+				else mdb.deleteRejectedInvitation(invite.sender, invite.recipient);
 				break;
 			}
 			default:
@@ -336,6 +326,7 @@ class WSS {
 	main() {
 		setInterval(() => {
 			mdb.updateMdb();
+			mdb.updateClient();
 		}, 1000 / 60);
 	}
 }
