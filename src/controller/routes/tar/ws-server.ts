@@ -1,5 +1,5 @@
 import { Ball, Vector, Paddle } from './game/index.js';
-import { mdb } from './mdb.js';
+import { mdb, Player } from './mdb.js';
 import { WebSocket } from 'ws';
 
 declare module 'ws' {
@@ -14,17 +14,23 @@ import _ from 'lodash';
 // ! shared ------------------------------------------------------------------------------------------
 
 interface MessageProps {
+	username: string;
 	message: string;
+	hash: string;
 	data: any;
 }
 export class Message {
+	public username: string;
 	public message: string;
+	public hash: string;
 	public data: string;
-	constructor({ message, data }: MessageProps) {
-		this.message = message;
+	constructor({ username, hash, message, data }: MessageProps) {
 		this.data = JSON.stringify(data);
+		this.username = username;
+		this.message = message;
+		this.hash = hash;
 	}
-	static instance = new Message({ message: '', data: {} });
+	static instance = new Message({ username: '', hash: '', message: '', data: {} });
 }
 
 export class WSError {
@@ -74,6 +80,14 @@ export class ClientInvitation {
 // ! res ------------------------------------------------------------------------------------------
 
 // * Pool
+
+export class Play {
+	public game: string;
+	constructor(game: string) {
+		this.game = game;
+	}
+	static instance = new Play('');
+}
 
 export class Pool {
 	public pool: ClientPlayer[];
@@ -186,13 +200,11 @@ export class Connect {
 }
 
 export class Invite {
-	sender: string;
 	recipient: string;
-	constructor(sender: string, recipient: string) {
-		this.sender = sender;
+	constructor(recipient: string) {
 		this.recipient = recipient;
 	}
-	public static instance = new Invite('', '');
+	public static instance = new Invite('');
 }
 
 // * Game
@@ -233,82 +245,90 @@ class WSS {
 	}
 
 	// ? Protocole Message Builders
-
-	ErrorMessage(error: string) {
-		return JSON.stringify(new Message({ message: 'ERROR', data: new WSError(error) }));
+	ErrorMessage(username: string, hash: string, error: string): string {
+		return JSON.stringify(new Message({ username, hash, message: 'ERROR', data: new WSError(error) }));
 	}
 
 	// * POOL
-	HashMessage(username: string, img: string, hash: string): string {
-		return JSON.stringify(new Message({ message: 'Hash', data: new Hash(username, img, hash) }));
+	HashMessage(username: string, hash: string, img: string): string {
+		return JSON.stringify(new Message({ username, hash, message: 'HASH', data: new Hash(username, img, hash) }));
 	}
-	PoolMessage(getClientPlayers: () => ClientPlayer[]): string {
-		return JSON.stringify(new Message({ message: 'POOL', data: new Pool(getClientPlayers()) }));
+	PlayMessage(username: string, hash: string, game: string): string {
+		return JSON.stringify(new Message({ username, hash, message: 'PLAY', data: new Play(game) }));
 	}
-	InvitationMessage(getInvitions: () => ClientInvitation[]): string {
-		return JSON.stringify(new Message({ message: 'INVITATIONS', data: new Invitations(getInvitions()) }));
+	PoolMessage(username: string, hash: string, getClientPlayers: () => ClientPlayer[]): string {
+		return JSON.stringify(new Message({ username, hash, message: 'POOL', data: new Pool(getClientPlayers()) }));
+	}
+	InvitationMessage(username: string, hash: string, getInvitions: () => ClientInvitation[]): string {
+		return JSON.stringify(new Message({ username, hash, message: 'INVITATIONS', data: new Invitations(getInvitions()) }));
 	}
 	// * GAME
-	StartMessage(): string {
-		return JSON.stringify(new Message({ message: 'START', data: new Start() }));
+	StartMessage(username: string, hash: string): string {
+		return JSON.stringify(new Message({ username, hash, message: 'START', data: new Start() }));
 	}
-	StopMessage(): string {
-		return JSON.stringify(new Message({ message: 'STOP', data: new Stop() }));
+	StopMessage(username: string, hash: string): string {
+		return JSON.stringify(new Message({ username, hash, message: 'STOP', data: new Stop() }));
 	}
-	FrameMessage(ball: Ball, rightPaddle: Paddle, leftPaddle: Paddle) {
-		return JSON.stringify(new Message({ message: 'FRAME', data: new Frame(ball, rightPaddle, leftPaddle) }));
+	FrameMessage(username: string, hash: string, ball: Ball, rightPaddle: Paddle, leftPaddle: Paddle): string {
+		return JSON.stringify(new Message({ username, hash, message: 'FRAME', data: new Frame(ball, rightPaddle, leftPaddle) }));
 	}
-	ScoreMessage(player: number, opponent: number): string {
-		return JSON.stringify(new Message({ message: 'SCORE', data: new Score(player, opponent) }));
+	ScoreMessage(username: string, hash: string, player: number, opponent: number): string {
+		return JSON.stringify(new Message({ username, hash, message: 'SCORE', data: new Score(player, opponent) }));
 	}
-	LostMessage(): string {
-		return JSON.stringify(new Message({ message: 'LOST', data: new Lost() }));
+	LostMessage(username: string, hash: string): string {
+		return JSON.stringify(new Message({ username, hash, message: 'LOST', data: new Lost() }));
 	}
-	WonMessage(): string {
-		return JSON.stringify(new Message({ message: 'WON', data: new Won() }));
+	WonMessage(username: string, hash: string): string {
+		return JSON.stringify(new Message({ username, hash, message: 'WON', data: new Won() }));
 	}
 
 	/************************************************************************************************************************
 	 *                                                        PARSER                                                        *
 	 ************************************************************************************************************************/
 	useParser(json: string, socket: WebSocket) {
-		const { message, data } = this.Json({ message: json, target: Message.instance });
-		switch (message) {
-			case 'CONNECT': {
-				// TODO: handle connect GAME
-				// ? connect.page = 'MAIN' | 'GAME';
-				const connect: Connect = this.Json({ message: data, target: Connect.instance });
-				console.log("CONNECT", connect);
-				if (connect.page === 'MAIN') mdb.addPlayer(connect.username, connect.img, socket);
-				break;
+		const { username, message, hash, data } = this.Json({ message: json, target: Message.instance });
+		if (message === 'CONNECT') {
+			// TODO: handle connect GAME
+			// ? connect.page = 'MAIN' | 'GAME';
+			const connect: Connect = this.Json({ message: data, target: Connect.instance });
+			if (connect.page === 'MAIN') {
+				const player: Player = mdb.addPlayer(connect.username, connect.img, socket);
+				player.socket.send(WS.HashMessage(player.username, player.socket.hash, player.img));
+			} else if (connect.page === 'GAME') {
+				const player: Player = mdb.createPlayer(connect.username, connect.img, socket);
+				mdb.connectPlayer(player, connect.query);
 			}
+		} else if (hash !== mdb.getPlayerHash(username)) throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
+		switch (message) {
+			case 'CONNECT':
+				break;
 			case 'INVITE': {
 				// TODO: handle invite
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log("INVITE", invite);
-				mdb.createInvitation(invite.sender, invite.recipient);
+				console.log('INVITE', username, invite);
+				mdb.createInvitation(username, invite.recipient);
 				break;
 			}
 			case 'ACCEPT': {
 				// TODO: handle accept
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log("ACCEPT", invite);
-				mdb.acceptInvitation(invite.sender, invite.recipient);
+				console.log('ACCEPT', username, invite);
+				mdb.acceptInvitation(invite.recipient, username);
 				break;
 			}
 			case 'REJECT': {
 				// TODO: handle reject
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log("REJECT", invite);
-				mdb.declineInvitation(invite.sender, invite.recipient);
+				console.log('REJECT', username, invite);
+				mdb.declineInvitation(invite.recipient, username);
 				break;
 			}
 			case 'DELETE': {
 				// TODO: handle delete
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log("DELETE", invite);
-				if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(invite.sender);
-				else mdb.deleteRejectedInvitation(invite.sender, invite.recipient);
+				console.log('DELETE', username, invite);
+				if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(username);
+				else mdb.deleteRejectedInvitation(invite.recipient, username);
 				break;
 			}
 			default:
@@ -327,6 +347,7 @@ class WSS {
 		setInterval(() => {
 			mdb.updateMdb();
 			mdb.updateClient();
+			mdb.updateRooms();
 		}, 1000 / 60);
 	}
 }

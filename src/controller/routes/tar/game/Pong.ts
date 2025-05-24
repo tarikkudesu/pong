@@ -9,6 +9,12 @@ export function randInt(min: number, max: number): number {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+export enum BallState {
+	IN = 1,
+	OUT_RIGHT = 2,
+	OUT_LEFT = 3,
+}
+
 class Keys {
 	public UP_R: boolean = false;
 	public DOWN_R: boolean = false;
@@ -86,7 +92,7 @@ export class Pong {
 		this.leftpaddle.move(up, down);
 	}
 
-	upddateBall(): void {
+	upddateBall(): BallState {
 		if (this.collision_ball_paddle(this.ball, this.rightPaddle)) {
 			this.penetration_resolution_ball_paddle(this.ball, this.rightPaddle);
 			this.collision_response_ball_paddle(this.ball, this.rightPaddle);
@@ -103,17 +109,10 @@ export class Pong {
 			this.penetration_resolution_ball_wall(this.ball, this.BottomWall);
 			this.collision_response_ball_wall(this.ball, this.BottomWall);
 		}
-		if (this.collision_detection_ball_wall(this.ball, this.RightWall)) {
-			this.gaming = false;
-			// this.penetration_resolution_ball_wall(this.ball, this.RightWall);
-			// this.collision_response_ball_wall(this.ball, this.RightWall);
-		}
-		if (this.collision_detection_ball_wall(this.ball, this.LeftWall)) {
-			this.gaming = false;
-			// this.penetration_resolution_ball_wall(this.ball, this.LeftWall);
-			// this.collision_response_ball_wall(this.ball, this.LeftWall);
-		}
+		if (this.collision_detection_ball_wall(this.ball, this.RightWall)) return BallState.OUT_RIGHT;
+		if (this.collision_detection_ball_wall(this.ball, this.LeftWall)) return BallState.OUT_LEFT;
 		this.ball.reposition();
+		return BallState.IN;
 	}
 	updatePaddles(): void {
 		// TODO: needs morework
@@ -182,8 +181,8 @@ export class Pong {
 	}
 
 	// * Main Frame
-	updateFrame(frames: any) {
-		this.upddateBall();
+	updateFrame(): BallState {
 		this.updatePaddles();
+		return this.upddateBall();
 	}
 }
