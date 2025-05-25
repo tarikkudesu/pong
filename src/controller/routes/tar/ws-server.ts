@@ -127,27 +127,21 @@ export class Frame {
 	public ballY: number;
 	public ballRadius: number;
 	public paddleRadius: number;
-	public leftPaddleTopX: number;
-	public leftPaddleTopY: number;
-	public rightPaddleTopX: number;
-	public rightPaddleTopY: number;
-	public leftPaddleBottomX: number;
-	public leftPaddleBottomY: number;
-	public rightPaddleBottomX: number;
-	public rightPaddleBottomY: number;
+	public paddleHeight: number;
+	public leftPaddlePosX: number;
+	public leftPaddlePosY: number;
+	public rightPaddlePosX: number;
+	public rightPaddlePosY: number;
 	constructor(ball: Ball, rightPaddle: Paddle, leftPaddle: Paddle) {
 		this.ballRadius = Math.ceil(ball.radius);
 		this.paddleRadius = Math.ceil(rightPaddle.radius);
 		this.ballX = Math.ceil(ball.pos.x);
 		this.ballY = Math.ceil(ball.pos.y);
-		this.rightPaddleTopX = Math.ceil(rightPaddle.start.x);
-		this.rightPaddleTopY = Math.ceil(rightPaddle.start.y);
-		this.rightPaddleBottomX = Math.ceil(rightPaddle.end.x);
-		this.rightPaddleBottomY = Math.ceil(rightPaddle.end.y);
-		this.leftPaddleTopX = Math.ceil(leftPaddle.start.x);
-		this.leftPaddleTopY = Math.ceil(leftPaddle.start.y);
-		this.leftPaddleBottomX = Math.ceil(leftPaddle.end.x);
-		this.leftPaddleBottomY = Math.ceil(leftPaddle.end.y);
+		this.rightPaddlePosX = Math.ceil(rightPaddle.pos.x);
+		this.rightPaddlePosY = Math.ceil(rightPaddle.pos.y);
+		this.leftPaddlePosX = Math.ceil(leftPaddle.pos.x);
+		this.leftPaddlePosY = Math.ceil(leftPaddle.pos.y);
+		this.paddleHeight = Math.ceil(rightPaddle.length);
 	}
 	static instance = new Frame(
 		new Ball({ pos: new Vector(0, 0), radius: 0, velocity: new Vector(0, 0) }),
@@ -291,6 +285,7 @@ class WSS {
 			// TODO: handle connect GAME
 			// ? connect.page = 'MAIN' | 'GAME';
 			const connect: Connect = this.Json({ message: data, target: Connect.instance });
+			console.log(connect);
 			if (connect.page === 'MAIN') {
 				const player: Player = mdb.addPlayer(connect.username, connect.img, socket);
 				player.socket.send(WS.HashMessage(player.username, player.socket.hash, player.img));
@@ -298,7 +293,8 @@ class WSS {
 				const player: Player = mdb.createPlayer(connect.username, connect.img, socket);
 				mdb.connectPlayer(player, connect.query);
 			}
-		} else if (hash !== mdb.getPlayerHash(username)) throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
+		}
+		// } else if (hash !== mdb.getPlayerHash(username)) throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
 		switch (message) {
 			case 'CONNECT':
 				break;
@@ -329,6 +325,12 @@ class WSS {
 				console.log('DELETE', username, invite);
 				if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(username);
 				else mdb.deleteRejectedInvitation(invite.recipient, username);
+				break;
+			}
+			case 'HOOK': {
+				// TODO: handle HOOK
+				const h: Hook = this.Json({ message: data, target: Hook.instance });
+				mdb.roomHook(username, h);
 				break;
 			}
 			default:

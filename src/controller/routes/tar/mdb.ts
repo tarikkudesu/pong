@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { WebSocket } from 'ws';
 import { BallState, Pong } from './game/index.js';
-import { ClientInvitation, ClientPlayer, WS } from './ws-server.js';
+import { ClientInvitation, ClientPlayer, Hook, WS } from './ws-server.js';
 import { randomUUID } from 'crypto';
 
 export const invitationTimeout: number = 30000;
@@ -59,23 +59,25 @@ export class Room {
 	setup() {
 		if (this.player && this.opponent) {
 			this.connectionState = 'playing';
+			this.sendScore();
 			this.pong = new Pong();
 			this.pong.setup(1000, 1000);
-			this.sendScore();
 		}
 	}
 	connectPlayer(player: Player) {
+		console.log('Connecting player');
 		this.player = player;
 		this.setup();
 	}
 	connectOpponent(opponent: Player) {
+		console.log('Connecting opponent');
 		this.opponent = opponent;
 		this.setup();
 	}
 	sendScore() {
 		if (this.connectionState !== 'playing' || !this.player || !this.opponent) return;
-		this.player.socket.send(WS.ScoreMessage(this.player.username, this.player.socket.hash, this.playerScore, this.opponentScore));
-		this.opponent.socket.send(WS.ScoreMessage(this.opponent.username, this.opponent.socket.hash, this.opponentScore, this.playerScore));
+		this.player.socket.send(WS.ScoreMessage(this.player.username, this.player.socket.hash, this.opponentScore, this.playerScore));
+		this.opponent.socket.send(WS.ScoreMessage(this.opponent.username, this.opponent.socket.hash, this.playerScore, this.opponentScore));
 	}
 	sendFrame() {
 		if (this.connectionState !== 'playing' || !this.player || !this.opponent || !this.pong) return;
@@ -89,6 +91,9 @@ export class Room {
 		this.player.socket.send(m);
 		this.opponent.socket.send(m);
 	}
+	hook(hook: Hook): void {
+		console.log(hook);
+	}
 	updateGame() {
 		if (this.connectionState !== 'playing' || !this.player || !this.opponent) return;
 		if (!this.player?.socket.OPEN) throw new Error('player disconnected: ' + this.player.username);
@@ -97,10 +102,10 @@ export class Room {
 			const ballState: BallState = this.pong.updateFrame();
 			if (ballState === BallState.OUT_RIGHT) {
 				this.opponentScore += 1;
-				this.sendScore();
+				this.setup();
 			} else if (ballState === BallState.OUT_LEFT) {
 				this.playerScore += 1;
-				this.sendScore();
+				this.setup();
 			} else {
 				this.sendFrame();
 			}
@@ -146,11 +151,28 @@ class Mdb {
 		return r;
 	}
 
+	// getPlayerRoom({ username }: Player): Room {
+	// 	let r: Room | null = null;
+	// 	this.rooms.forEach((value) => {
+	// 		if (value.player?.username === username || value.opponent?.username === username) r = value;
+	// 	});
+	// 	if (!r) throw new Error("Room doesn't exists");
+	// 	return r;
+	// }
+
 	// * connnect player to a room
 	connectPlayer(player: Player, gid: string) {
 		this.rooms.forEach((value) => {
 			if (value.playerUsername === player.username && value.playerGID === gid) value.connectPlayer(player);
 			else if (value.opponentUsername === player.username && value.opponentGID === gid) value.connectOpponent(player);
+		});
+	}
+
+	// * room hook
+	roomHook(username: string, hook: Hook): void {
+		this.rooms.forEach((value) => {
+			if (value.player?.username === username) value.pong?.keyPressLeft(hook.up, hook.down);
+			if (value.opponent?.username === username) value.pong?.keyPressRight(hook.up, hook.down);
 		});
 	}
 
@@ -236,6 +258,8 @@ class Mdb {
 			const senGID: string = randomUUID();
 			const recGID: string = randomUUID();
 			this.addRoom(sen.username, senGID, rec.username, recGID);
+			this.removePlayer(sen.username);
+			this.removePlayer(rec.username);
 			sen.socket.send(WS.PlayMessage(sen.username, sen.socket.hash, senGID));
 			rec.socket.send(WS.PlayMessage(rec.username, rec.socket.hash, recGID));
 		}
@@ -264,7 +288,7 @@ class Mdb {
 	}
 	// * cancel all player invitations
 	cancelAllPlayerInvitations(sender: string) {
-		if (!this.checkIfPlayerExists(sender)) throw new Error("player doesn't exist");
+		if (!this.checkIfPlayerExists(sender)) throw new Error("cancel all player invitations: player doesn't exist");
 		const invitations: Invitation[] = [];
 		this.invitations.forEach((value) => {
 			if (value.sender === sender) invitations.push(value);
@@ -285,8 +309,9 @@ class Mdb {
 			}
 		});
 	}
+	// * get all player invitations
 	getAllPlayerInvitations(username: string): ClientInvitation[] {
-		if (!this.checkIfPlayerExists(username)) throw new Error("player doesn't exist");
+		if (!this.checkIfPlayerExists(username)) throw new Error("get all player invitations: player doesn't exist");
 		const invitations: ClientInvitation[] = [];
 		this.invitations.forEach((value) => {
 			if (value.recipient === username) invitations.push(new ClientInvitation(value.sender, value.img, value.invite_status));
