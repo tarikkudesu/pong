@@ -1,9 +1,10 @@
-import { Ball, Vector, Paddle } from './game/index.js';
+import { Ball, Vector, Paddle } from './pong.js';
 import { mdb, Player } from './mdb.js';
 import { WebSocket } from 'ws';
 
 declare module 'ws' {
 	interface WebSocket {
+		PLAYFREE: boolean;
 		username: string;
 		hash: string;
 	}
@@ -179,18 +180,23 @@ export class Won {
 
 // * Pool
 export class Connect {
-	// TODO: initial game data can be added here
 	img: string;
 	page: string;
 	query: string;
-	username: string;
-	constructor(username: string, img: string, page: string, query: string) {
-		this.username = username;
+	constructor(img: string, page: string, query: string) {
 		this.query = query;
 		this.page = page;
 		this.img = img;
 	}
-	public static instance = new Connect('', '', '', '');
+	public static instance = new Connect('', '', '');
+}
+
+export class Disconnect {
+	page: string;
+	constructor(page: string) {
+		this.page = page;
+	}
+	public static instance = new Disconnect('');
 }
 
 export class Invite {
@@ -263,8 +269,8 @@ class WSS {
 	StopMessage(username: string, hash: string): string {
 		return JSON.stringify(new Message({ username, hash, message: 'STOP', data: new Stop() }));
 	}
-	FrameMessage(username: string, hash: string, ball: Ball, rightPaddle: Paddle, leftPaddle: Paddle): string {
-		return JSON.stringify(new Message({ username, hash, message: 'FRAME', data: new Frame(ball, rightPaddle, leftPaddle) }));
+	FrameMessage(username: string, hash: string, frame: Frame): string {
+		return JSON.stringify(new Message({ username, hash, message: 'FRAME', data: frame }));
 	}
 	ScoreMessage(username: string, hash: string, player: number, opponent: number): string {
 		return JSON.stringify(new Message({ username, hash, message: 'SCORE', data: new Score(player, opponent) }));
@@ -281,46 +287,60 @@ class WSS {
 	 ************************************************************************************************************************/
 	useParser(json: string, socket: WebSocket) {
 		const { username, message, hash, data } = this.Json({ message: json, target: Message.instance });
-		if (message === 'CONNECT') {
-			// TODO: handle connect GAME
-			// ? connect.page = 'MAIN' | 'GAME';
-			const connect: Connect = this.Json({ message: data, target: Connect.instance });
-			console.log(connect);
-			if (connect.page === 'MAIN') {
-				const player: Player = mdb.addPlayer(connect.username, connect.img, socket);
-				player.socket.send(WS.HashMessage(player.username, player.socket.hash, player.img));
-			} else if (connect.page === 'GAME') {
-				const player: Player = mdb.createPlayer(connect.username, connect.img, socket);
-				mdb.connectPlayer(player, connect.query);
-			}
-		}
-		// } else if (hash !== mdb.getPlayerHash(username)) throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
+		if (message !== "CONNECT" && hash !== mdb.getPlayerHash(username)) throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
 		switch (message) {
 			case 'CONNECT':
+				const connect: Connect = this.Json({ message: data, target: Connect.instance });
+				const player: Player = mdb.createPlayer(username, connect.img, socket);
+				switch (connect.page) {
+					case 'MAIN': {
+						mdb.addPlayer(player);
+						break;
+					}
+					case 'GAME': {
+						mdb.connectPlayer(player, connect.query);
+						break;
+					}
+					default:
+						break;
+				}
+				player.socket.send(WS.HashMessage(player.username, player.socket.hash, player.img));
 				break;
+			case 'DISCONNECT': {
+				const disconnect: Disconnect = this.Json({ message: data, target: Disconnect.instance });
+				switch (disconnect.page) {
+					case 'MAIN': {
+						mdb.removePlayer(username);
+						break;
+					}
+					case 'GAME': {
+						mdb.disconnectPlayer(username);
+						break;
+					}
+					default:
+						break;
+				}
+				break;
+			}
 			case 'INVITE': {
-				// TODO: handle invite
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
 				console.log('INVITE', username, invite);
 				mdb.createInvitation(username, invite.recipient);
 				break;
 			}
 			case 'ACCEPT': {
-				// TODO: handle accept
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
 				console.log('ACCEPT', username, invite);
 				mdb.acceptInvitation(invite.recipient, username);
 				break;
 			}
 			case 'REJECT': {
-				// TODO: handle reject
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
 				console.log('REJECT', username, invite);
 				mdb.declineInvitation(invite.recipient, username);
 				break;
 			}
 			case 'DELETE': {
-				// TODO: handle delete
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
 				console.log('DELETE', username, invite);
 				if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(username);
@@ -328,7 +348,6 @@ class WSS {
 				break;
 			}
 			case 'HOOK': {
-				// TODO: handle HOOK
 				const h: Hook = this.Json({ message: data, target: Hook.instance });
 				mdb.roomHook(username, h);
 				break;
@@ -355,3 +374,18 @@ class WSS {
 }
 
 export const WS = new WSS();
+
+export function transformFrame(f: Frame, width: number, height: number): Frame {
+	return {
+		...f,
+		ballY: f.ballY,
+		ballX: width - f.ballX,
+		ballRadius: f.ballRadius,
+		paddleHeight: f.paddleHeight,
+		paddleRadius: f.paddleRadius,
+		leftPaddlePosY: f.leftPaddlePosY,
+		rightPaddlePosY: f.rightPaddlePosY,
+		leftPaddlePosX: width - f.leftPaddlePosX,
+		rightPaddlePosX: width - f.rightPaddlePosX,
+	};
+}

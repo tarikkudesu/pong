@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 import { WebSocket } from 'ws';
-import { BallState, Pong } from './game/index.js';
-import { ClientInvitation, ClientPlayer, Hook, WS } from './ws-server.js';
 import { randomUUID } from 'crypto';
+import { BallState, Pong, PongHeight, PongWidth, randInt } from './pong.js';
+import { ClientInvitation, ClientPlayer, Frame, Hook, transformFrame, WS } from './ws-server.js';
 
 export const invitationTimeout: number = 30000;
 
@@ -38,6 +38,8 @@ export class Player {
 
 export class Room {
 	// * initial setup
+	public playerNoBan: number = 1;
+
 	public playerGID: string;
 	public opponentGID: string;
 	public playerUsername: string;
@@ -61,38 +63,35 @@ export class Room {
 			this.connectionState = 'playing';
 			this.sendScore();
 			this.pong = new Pong();
-			this.pong.setup(1000, 1000);
+			let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
+			if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI * 1000;
+			this.pong.setup(angle / 1000);
+			this.playerNoBan += 1;
+			if (this.playerNoBan >= 5) this.playerNoBan = 1;
 		}
 	}
 	connectPlayer(player: Player) {
-		console.log('Connecting player');
 		this.player = player;
 		this.setup();
 	}
 	connectOpponent(opponent: Player) {
-		console.log('Connecting opponent');
 		this.opponent = opponent;
 		this.setup();
 	}
 	sendScore() {
-		if (this.connectionState !== 'playing' || !this.player || !this.opponent) return;
+		if (this.connectionState !== 'playing') return;
+		if (!this.player || !this.opponent) throw new Error('No player connected');
+		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Closed socket');
 		this.player.socket.send(WS.ScoreMessage(this.player.username, this.player.socket.hash, this.opponentScore, this.playerScore));
 		this.opponent.socket.send(WS.ScoreMessage(this.opponent.username, this.opponent.socket.hash, this.playerScore, this.opponentScore));
 	}
 	sendFrame() {
-		if (this.connectionState !== 'playing' || !this.player || !this.opponent || !this.pong) return;
-		const m: string = WS.FrameMessage(
-			this.player.username,
-			this.player.socket.hash,
-			this.pong.ball,
-			this.pong.rightPaddle,
-			this.pong.leftpaddle
-		);
-		this.player.socket.send(m);
-		this.opponent.socket.send(m);
-	}
-	hook(hook: Hook): void {
-		console.log(hook);
+		if (this.connectionState !== 'playing' || !this.pong) return;
+		if (!this.player || !this.opponent) throw new Error('No player connected');
+		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Closed socket');
+		const f: Frame = new Frame(this.pong.ball, this.pong.rightPaddle, this.pong.leftpaddle);
+		this.player.socket.send(WS.FrameMessage(this.player.username, this.player.socket.hash, transformFrame(f, PongHeight, PongWidth)));
+		this.opponent.socket.send(WS.FrameMessage(this.opponent.username, this.opponent.socket.hash, f));
 	}
 	updateGame() {
 		if (this.connectionState !== 'playing' || !this.player || !this.opponent) return;
@@ -109,6 +108,15 @@ export class Room {
 			} else {
 				this.sendFrame();
 			}
+			if (this.playerScore >= 7) {
+				this.player.socket.send(WS.LostMessage(this.player.username, this.player.socket.hash));
+				this.opponent.socket.send(WS.WonMessage(this.opponent.username, this.opponent.socket.hash));
+				this.pong = null;
+			} else if (this.opponentScore >= 7) {
+				this.opponent.socket.send(WS.LostMessage(this.opponent.username, this.opponent.socket.hash));
+				this.player.socket.send(WS.WonMessage(this.player.username, this.player.socket.hash));
+				this.pong = null;
+			}
 		}
 	}
 }
@@ -124,6 +132,7 @@ class Mdb {
 		const player: Player = new Player(username, img, socket);
 		const hash: string = generateHash(username);
 		socket.username = username;
+		socket.PLAYFREE = true;
 		socket.hash = hash;
 		return player;
 	}
@@ -135,7 +144,6 @@ class Mdb {
 	// * new room
 	addRoom(pu: string, pgid: string, ou: string, ogid: string): void {
 		this.rooms.set(pu + ou, new Room(pu, pgid, ou, ogid));
-		console.log(this.rooms.values());
 	}
 
 	// * remove room
@@ -151,20 +159,23 @@ class Mdb {
 		return r;
 	}
 
-	// getPlayerRoom({ username }: Player): Room {
-	// 	let r: Room | null = null;
-	// 	this.rooms.forEach((value) => {
-	// 		if (value.player?.username === username || value.opponent?.username === username) r = value;
-	// 	});
-	// 	if (!r) throw new Error("Room doesn't exists");
-	// 	return r;
-	// }
-
 	// * connnect player to a room
 	connectPlayer(player: Player, gid: string) {
 		this.rooms.forEach((value) => {
 			if (value.playerUsername === player.username && value.playerGID === gid) value.connectPlayer(player);
 			else if (value.opponentUsername === player.username && value.opponentGID === gid) value.connectOpponent(player);
+		});
+	}
+
+	disconnectPlayer(username: string): void {
+		this.rooms.forEach((value) => {
+			if (value.playerUsername === username) {
+				this.getPlayer(username).socket.PLAYFREE = true;
+				value.player = null;
+			} else if (value.opponentUsername === username) {
+				this.getPlayer(username).socket.PLAYFREE = true;
+				value.opponent = null;
+			}
 		});
 	}
 
@@ -188,10 +199,9 @@ class Mdb {
 	 ****************************************************************************************************************/
 
 	// * add player
-	addPlayer(username: string, img: string, socket: WebSocket): Player {
-		if (this.checkIfPlayerExists(username)) throw new Error('Player already exists');
-		this.players.set(username, this.createPlayer(username, img, socket));
-		return this.getPlayer(username);
+	addPlayer(player: Player): void {
+		if (this.checkIfPlayerExists(player.username)) throw new Error('Player already exists');
+		this.players.set(player.username, player);
 	}
 	// * remove player
 	removePlayer(username: string) {
@@ -254,12 +264,12 @@ class Mdb {
 		if (sen.username === rec.username) throw new Error('you are trying to accept an invite to yourself, pretty smart huh!!');
 		const invite: Invitation = this.getInvitation(sen, rec);
 		if (invite.invite_status === 'pending') {
-			invite.invite_status = 'accepted';
 			const senGID: string = randomUUID();
 			const recGID: string = randomUUID();
+			invite.invite_status = 'accepted';
+			sen.socket.PLAYFREE = false;
+			rec.socket.PLAYFREE = false;
 			this.addRoom(sen.username, senGID, rec.username, recGID);
-			this.removePlayer(sen.username);
-			this.removePlayer(rec.username);
 			sen.socket.send(WS.PlayMessage(sen.username, sen.socket.hash, senGID));
 			rec.socket.send(WS.PlayMessage(rec.username, rec.socket.hash, recGID));
 		}

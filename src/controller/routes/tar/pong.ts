@@ -1,14 +1,133 @@
-import { Paddle } from './Paddle.js';
-import { Ball } from './Ball.js';
-import { Vector } from './Vector.js';
-import { Wall } from './Wall.js';
-
+export const PongHeight: number = 1024;
+export const PongWidth: number = 768;
 const friction: number = 0.05;
 
 export function randInt(min: number, max: number): number {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+
+// ! Vector ------------------------------------------------------------------------------------------------
+export class Vector {
+	public x: number;
+	public y: number;
+	constructor(x: number, y: number) {
+		this.x = x;
+		this.y = y;
+	}
+	add(v: Vector): Vector {
+		return new Vector(this.x + v.x, this.y + v.y);
+	}
+	subtr(v: Vector): Vector {
+		return new Vector(this.x - v.x, this.y - v.y);
+	}
+	mag(): number {
+		return Math.sqrt(this.x ** 2 + this.y ** 2);
+	}
+	mult(n: number): Vector {
+		return new Vector(this.x * n, this.y * n);
+	}
+	normal(): Vector {
+		return new Vector(-this.y, this.x).unit();
+	}
+	unit(): Vector {
+		if (this.mag() === 0) return new Vector(0, 0);
+		else return new Vector(this.x / this.mag(), this.y / this.mag());
+	}
+	static dot(v1: Vector, v2: Vector): number {
+		return v1.x * v2.x + v1.y * v2.y;
+	}
+	static cross(v1: Vector, v2: Vector): number {
+		return v1.x * v2.y - v1.y * v2.x;
+	}
+}
+
+// ! Ball ------------------------------------------------------------------------------------------------
+interface BallProps {
+	pos: Vector;
+	radius: number;
+	velocity: Vector;
+}
+export class Ball {
+	public pos: Vector;
+	public radius: number;
+	public velocity: Vector = new Vector(0, 0);
+	constructor({ pos, radius, velocity }: BallProps) {
+		this.pos = pos;
+		this.radius = radius;
+		this.velocity = velocity;
+	}
+	reposition(): void {
+		this.pos = this.pos.add(this.velocity.mult(10));
+	}
+}
+
+
+// ! Wall ------------------------------------------------------------------------------------------------
+interface WallProps {
+	start: Vector;
+	end: Vector;
+}
+export class Wall {
+	public dir: Vector;
+	public end: Vector;
+	public start: Vector;
+	public center: Vector;
+	public length: number;
+	constructor({ start, end }: WallProps) {
+		this.start = start;
+		this.end = end;
+		this.dir = this.end.subtr(this.start).unit();
+		this.center = this.start.add(this.end).mult(0.5);
+		this.length = this.end.subtr(this.start).mag();
+	}
+}
+
+// ! Paddle ------------------------------------------------------------------------------------------------
+interface PaddleProps {
+	constrains: Vector;
+	radius: number;
+	start: Vector;
+	end: Vector;
+}
+export class Paddle {
+	public start: Vector;
+	public end: Vector;
+	public radius: number;
+	public length: number;
+	public dir: Vector;
+	public pos: Vector;
+	public vel: Vector = new Vector(0, 0);
+	public acc: Vector = new Vector(0, 0);
+	public constrains: Vector = new Vector(0, 0);
+	public acceleration: number = 1.8;
+	constructor({ constrains, radius, start, end }: PaddleProps) {
+		this.constrains = constrains;
+		this.radius = radius;
+		this.start = start;
+		this.end = end;
+		this.pos = this.start.add(this.end).mult(0.5);
+		this.dir = this.end.subtr(this.start).unit();
+		this.length = this.end.subtr(this.start).mag();
+	}
+	move(Up: boolean, Down: boolean): void {
+		if (Up) this.acc = this.dir.mult(-this.acceleration);
+		if (Down) this.acc = this.dir.mult(this.acceleration);
+		if (!Up && !Down) this.acc = new Vector(0, 0);
+	}
+	reposition(): void {
+		this.acc = this.acc.unit().mult(this.acceleration);
+		this.vel = this.vel.add(this.acc).mult(1 - friction);
+		const newPos = this.pos.add(this.vel);
+		if (newPos.y < this.constrains.x) newPos.y = this.constrains.x;
+		if (newPos.y > this.constrains.y) newPos.y = this.constrains.y;
+		this.pos = newPos;
+		this.start = this.pos.add(this.dir.mult(-this.length / 2));
+		this.end = this.pos.add(this.dir.mult(this.length / 2));
+	}
+}
+
+// ! Game ------------------------------------------------------------------------------------------------
 export enum BallState {
 	IN = 1,
 	OUT_RIGHT = 2,
@@ -23,7 +142,6 @@ class Keys {
 }
 
 export class Pong {
-	public gaming: boolean = true;
 	public keys: Keys = new Keys();
 	public ballRadius: number = 10; // * Customizable
 	public paddleHeight: number = 60; // * Customizable
@@ -37,42 +155,39 @@ export class Pong {
 	public rightPaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
 	public leftpaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
 
-	constructor() {}
-
-	setup(width: number, height: number): void {
+	constructor() {
 		// * Create Walls
-		this.TopWall = new Wall({ start: new Vector(5, 0), end: new Vector(width - 5, 0) });
-		this.RightWall = new Wall({ start: new Vector(width - 5, 0), end: new Vector(width - 5, height) });
-		this.BottomWall = new Wall({ start: new Vector(width - 5, height), end: new Vector(0, height) });
-		this.LeftWall = new Wall({ start: new Vector(5, height), end: new Vector(5, 0) });
+		this.TopWall = new Wall({ start: new Vector(5, 0), end: new Vector(PongWidth - 5, 0) });
+		this.RightWall = new Wall({ start: new Vector(PongWidth - 5, 0), end: new Vector(PongWidth - 5, PongHeight) });
+		this.BottomWall = new Wall({ start: new Vector(PongWidth - 5, PongHeight), end: new Vector(0, PongHeight) });
+		this.LeftWall = new Wall({ start: new Vector(5, PongHeight), end: new Vector(5, 0) });
 
 		// * Create Paddles
 		this.rightPaddle = new Paddle({
-			start: new Vector(width - this.paddleDistance, height / 2 - this.paddleHeight),
-			end: new Vector(width - this.paddleDistance, height / 2 + this.paddleHeight),
+			start: new Vector(PongWidth - this.paddleDistance, PongHeight / 2 - this.paddleHeight),
+			end: new Vector(PongWidth - this.paddleDistance, PongHeight / 2 + this.paddleHeight),
 			radius: this.paddleRadius,
 			constrains: new Vector(
 				this.paddleHeight + this.paddleRadius + this.ballRadius * 2,
-				height - this.paddleHeight - this.paddleRadius - this.ballRadius
+				PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius
 			),
 		});
 		this.leftpaddle = new Paddle({
-			start: new Vector(this.paddleDistance, height / 2 - this.paddleHeight),
-			end: new Vector(this.paddleDistance, height / 2 + this.paddleHeight),
+			start: new Vector(this.paddleDistance, PongHeight / 2 - this.paddleHeight),
+			end: new Vector(this.paddleDistance, PongHeight / 2 + this.paddleHeight),
 			radius: this.paddleRadius,
 			constrains: new Vector(
 				this.paddleHeight + this.paddleRadius + this.ballRadius * 2,
-				height - this.paddleHeight - this.paddleRadius - this.ballRadius
+				PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius
 			),
 		});
-
-		const angle = randInt((-Math.PI / 6) * 100, (Math.PI / 6) * 100);
-
+	}
+	setup(angle: number): void {
 		// * Create ball
 		this.ball = new Ball({
-			pos: new Vector(width / 2, height / 2),
+			pos: new Vector(PongWidth / 2, PongHeight / 2),
 			radius: this.ballRadius,
-			velocity: new Vector(1 * Math.cos(angle / 100), 1 * Math.sin(angle / 100)).unit(),
+			velocity: new Vector(1 * Math.cos(angle), 1 * Math.sin(angle)).unit(),
 		});
 	}
 	keyPressRight(up: boolean, down: boolean): void {
@@ -109,16 +224,20 @@ export class Pong {
 			this.penetration_resolution_ball_wall(this.ball, this.BottomWall);
 			this.collision_response_ball_wall(this.ball, this.BottomWall);
 		}
+		this.ball.reposition();
 		if (this.collision_detection_ball_wall(this.ball, this.RightWall)) return BallState.OUT_RIGHT;
 		if (this.collision_detection_ball_wall(this.ball, this.LeftWall)) return BallState.OUT_LEFT;
-		this.ball.reposition();
 		return BallState.IN;
 	}
 	updatePaddles(): void {
-		// TODO: needs morework
-		// TODO: collision detection
-		// TODO: penetration resolution
-		// TODO: collision response
+		if (this.collision_ball_paddle(this.ball, this.rightPaddle)) {
+			this.penetration_resolution_ball_paddle(this.ball, this.rightPaddle);
+			this.collision_response_ball_paddle(this.ball, this.rightPaddle);
+		}
+		if (this.collision_ball_paddle(this.ball, this.leftpaddle)) {
+			this.penetration_resolution_ball_paddle(this.ball, this.leftpaddle);
+			this.collision_response_ball_paddle(this.ball, this.leftpaddle);
+		}
 		this.rightPaddle.reposition();
 		this.leftpaddle.reposition();
 	}
@@ -179,6 +298,8 @@ export class Pong {
 			ball.velocity.y = x;
 		}
 	}
+
+	// * Collision Paddle Ball
 
 	// * Main Frame
 	updateFrame(): BallState {

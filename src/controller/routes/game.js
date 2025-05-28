@@ -1,8 +1,8 @@
-import { WS } from './tar/dist/ws-server.js';
+import { WS } from './tar/dist/index.js';
 
 export default async (fastify) => {
+	WS.main();
 	fastify.get('/', { websocket: true }, (connection, req) => {
-		console.log('WebSocket connection established');
 		connection.on('message', (message) => {
 			try {
 				console.log('Received message:', message.toString());
