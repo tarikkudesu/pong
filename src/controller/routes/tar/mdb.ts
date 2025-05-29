@@ -59,10 +59,9 @@ export class Room {
 		this.opponentUsername = ou;
 	}
 	setup() {
-		if (this.player && this.opponent) {
+		if (this.player && this.opponent && this.pong) {
 			this.connectionState = 'playing';
 			this.sendScore();
-			this.pong = new Pong();
 			let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
 			if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI * 1000;
 			this.pong.setup(angle / 1000);
@@ -72,10 +71,12 @@ export class Room {
 	}
 	connectPlayer(player: Player) {
 		this.player = player;
+		this.pong = new Pong();
 		this.setup();
 	}
 	connectOpponent(opponent: Player) {
 		this.opponent = opponent;
+		this.pong = new Pong();
 		this.setup();
 	}
 	sendScore() {
@@ -90,7 +91,7 @@ export class Room {
 		if (!this.player || !this.opponent) throw new Error('No player connected');
 		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Closed socket');
 		const f: Frame = new Frame(this.pong.ball, this.pong.rightPaddle, this.pong.leftpaddle);
-		this.player.socket.send(WS.FrameMessage(this.player.username, this.player.socket.hash, transformFrame(f, PongHeight, PongWidth)));
+		this.player.socket.send(WS.FrameMessage(this.player.username, this.player.socket.hash, transformFrame(f)));
 		this.opponent.socket.send(WS.FrameMessage(this.opponent.username, this.opponent.socket.hash, f));
 	}
 	updateGame() {

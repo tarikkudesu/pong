@@ -21,5 +21,4 @@ export class Doom {
 		if (this.table[row][col]) throw new Error('already flipped');
 		this.table[row][col] = true;
 	}
-	
 }

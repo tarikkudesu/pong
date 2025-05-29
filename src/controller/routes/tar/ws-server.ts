@@ -1,4 +1,4 @@
-import { Ball, Vector, Paddle } from './pong.js';
+import { Ball, Vector, Paddle, PongWidth } from './pong.js';
 import { mdb, Player } from './mdb.js';
 import { WebSocket } from 'ws';
 
@@ -287,7 +287,8 @@ class WSS {
 	 ************************************************************************************************************************/
 	useParser(json: string, socket: WebSocket) {
 		const { username, message, hash, data } = this.Json({ message: json, target: Message.instance });
-		if (message !== "CONNECT" && hash !== mdb.getPlayerHash(username)) throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
+		if (message !== 'CONNECT' && hash !== mdb.getPlayerHash(username))
+			throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
 		switch (message) {
 			case 'CONNECT':
 				const connect: Connect = this.Json({ message: data, target: Connect.instance });
@@ -375,17 +376,17 @@ class WSS {
 
 export const WS = new WSS();
 
-export function transformFrame(f: Frame, width: number, height: number): Frame {
+export function transformFrame(f: Frame): Frame {
 	return {
 		...f,
 		ballY: f.ballY,
-		ballX: width - f.ballX,
+		ballX: PongWidth - f.ballX,
 		ballRadius: f.ballRadius,
 		paddleHeight: f.paddleHeight,
 		paddleRadius: f.paddleRadius,
-		leftPaddlePosY: f.leftPaddlePosY,
-		rightPaddlePosY: f.rightPaddlePosY,
-		leftPaddlePosX: width - f.leftPaddlePosX,
-		rightPaddlePosX: width - f.rightPaddlePosX,
+		leftPaddlePosY: f.rightPaddlePosY,
+		rightPaddlePosY: f.leftPaddlePosY,
+		leftPaddlePosX: PongWidth - f.rightPaddlePosX,
+		rightPaddlePosX: PongWidth - f.leftPaddlePosX,
 	};
 }

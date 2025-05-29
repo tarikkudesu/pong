@@ -1,11 +1,10 @@
-export const PongHeight: number = 1024;
-export const PongWidth: number = 768;
+export const PongWidth: number = 1024;
+export const PongHeight: number = 768;
 const friction: number = 0.05;
 
 export function randInt(min: number, max: number): number {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-
 
 // ! Vector ------------------------------------------------------------------------------------------------
 export class Vector {
@@ -61,7 +60,6 @@ export class Ball {
 		this.pos = this.pos.add(this.velocity.mult(10));
 	}
 }
-
 
 // ! Wall ------------------------------------------------------------------------------------------------
 interface WallProps {
@@ -157,10 +155,10 @@ export class Pong {
 
 	constructor() {
 		// * Create Walls
-		this.TopWall = new Wall({ start: new Vector(5, 0), end: new Vector(PongWidth - 5, 0) });
-		this.RightWall = new Wall({ start: new Vector(PongWidth - 5, 0), end: new Vector(PongWidth - 5, PongHeight) });
-		this.BottomWall = new Wall({ start: new Vector(PongWidth - 5, PongHeight), end: new Vector(0, PongHeight) });
-		this.LeftWall = new Wall({ start: new Vector(5, PongHeight), end: new Vector(5, 0) });
+		this.TopWall = new Wall({ start: new Vector(0, 0), end: new Vector(PongWidth, 0) });
+		this.RightWall = new Wall({ start: new Vector(PongWidth, 0), end: new Vector(PongWidth, PongHeight) });
+		this.BottomWall = new Wall({ start: new Vector(PongWidth, PongHeight), end: new Vector(0, PongHeight) });
+		this.LeftWall = new Wall({ start: new Vector(0, PongHeight), end: new Vector(0, 0) });
 
 		// * Create Paddles
 		this.rightPaddle = new Paddle({
