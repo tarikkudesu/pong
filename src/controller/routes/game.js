@@ -5,10 +5,9 @@ export default async (fastify) => {
 	fastify.get('/', { websocket: true }, (connection, req) => {
 		connection.on('message', (message) => {
 			try {
-				console.log('Received message:', message.toString());
 				WS.useParser(message.toString(), connection);
 			} catch (error) {
-				console.error('Error processing message:', error.message);
+				console.error('\x1b[31mError processing message:', error.message);
 			}
 		});
 		connection.on('error', (err) => {
@@ -21,7 +20,6 @@ export default async (fastify) => {
 		});
 		connection.on('close', (code, reason) => {
 			try {
-				console.log('WebSocket closed:', code, reason);
 				WS.closeSocket(connection);
 			} catch (error) {
 				console.error('Error processing message:', error.message);

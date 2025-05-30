@@ -112,10 +112,14 @@ export class Room {
 			if (this.playerScore >= 7) {
 				this.player.socket.send(WS.LostMessage(this.player.username, this.player.socket.hash));
 				this.opponent.socket.send(WS.WonMessage(this.opponent.username, this.opponent.socket.hash));
+				this.opponent.socket.PLAYFREE = true;
+				this.player.socket.PLAYFREE = true;
 				this.pong = null;
 			} else if (this.opponentScore >= 7) {
 				this.opponent.socket.send(WS.LostMessage(this.opponent.username, this.opponent.socket.hash));
 				this.player.socket.send(WS.WonMessage(this.player.username, this.player.socket.hash));
+				this.opponent.socket.PLAYFREE = true;
+				this.player.socket.PLAYFREE = true;
 				this.pong = null;
 			}
 		}
@@ -163,11 +167,17 @@ class Mdb {
 	// * connnect player to a room
 	connectPlayer(player: Player, gid: string) {
 		this.rooms.forEach((value) => {
-			if (value.playerUsername === player.username && value.playerGID === gid) value.connectPlayer(player);
-			else if (value.opponentUsername === player.username && value.opponentGID === gid) value.connectOpponent(player);
+			if (value.playerUsername === player.username && value.playerGID === gid) {
+				value.connectPlayer(player);
+				player.socket.PLAYFREE = false;
+			} else if (value.opponentUsername === player.username && value.opponentGID === gid) {
+				value.connectOpponent(player);
+				player.socket.PLAYFREE = false;
+			}
 		});
 	}
 
+	// ! May not be needed
 	disconnectPlayer(username: string): void {
 		this.rooms.forEach((value) => {
 			if (value.playerUsername === username) {
@@ -229,7 +239,7 @@ class Mdb {
 		const player: Player = this.getPlayer(username);
 		const pool: ClientPlayer[] = [];
 		this.players.forEach((value, key) => {
-			if (value.username !== username) {
+			if (value.username !== username && value.socket.PLAYFREE === true) {
 				try {
 					pool.push(new ClientPlayer(value.username, value.img, this.getInvitation(player, value).invite_status));
 				} catch (err: any) {
@@ -268,8 +278,6 @@ class Mdb {
 			const senGID: string = randomUUID();
 			const recGID: string = randomUUID();
 			invite.invite_status = 'accepted';
-			sen.socket.PLAYFREE = false;
-			rec.socket.PLAYFREE = false;
 			this.addRoom(sen.username, senGID, rec.username, recGID);
 			sen.socket.send(WS.PlayMessage(sen.username, sen.socket.hash, senGID));
 			rec.socket.send(WS.PlayMessage(rec.username, rec.socket.hash, recGID));
@@ -338,7 +346,7 @@ class Mdb {
 	}
 	updateClient() {
 		this.players.forEach((value) => {
-			if (value.socket.readyState === WebSocket.OPEN) {
+			if (value.socket.readyState === WebSocket.OPEN && value.socket.PLAYFREE === true) {
 				value.socket.send(
 					WS.InvitationMessage(value.username, value.socket.hash, () => this.getAllPlayerInvitations(value.username))
 				);

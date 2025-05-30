@@ -191,12 +191,12 @@ export class Connect {
 	public static instance = new Connect('', '', '');
 }
 
-export class Disconnect {
-	page: string;
-	constructor(page: string) {
-		this.page = page;
+export class Engage {
+	gid: string;
+	constructor(gid: string) {
+		this.gid = gid;
 	}
-	public static instance = new Disconnect('');
+	public static instance = new Engage('');
 }
 
 export class Invite {
@@ -287,63 +287,38 @@ class WSS {
 	 ************************************************************************************************************************/
 	useParser(json: string, socket: WebSocket) {
 		const { username, message, hash, data } = this.Json({ message: json, target: Message.instance });
+		// console.log("\x1b[33m", username, )
 		if (message !== 'CONNECT' && hash !== mdb.getPlayerHash(username))
 			throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
 		switch (message) {
 			case 'CONNECT':
 				const connect: Connect = this.Json({ message: data, target: Connect.instance });
 				const player: Player = mdb.createPlayer(username, connect.img, socket);
-				switch (connect.page) {
-					case 'MAIN': {
-						mdb.addPlayer(player);
-						break;
-					}
-					case 'GAME': {
-						mdb.connectPlayer(player, connect.query);
-						break;
-					}
-					default:
-						break;
-				}
+				mdb.addPlayer(player);
 				player.socket.send(WS.HashMessage(player.username, player.socket.hash, player.img));
 				break;
-			case 'DISCONNECT': {
-				const disconnect: Disconnect = this.Json({ message: data, target: Disconnect.instance });
-				switch (disconnect.page) {
-					case 'MAIN': {
-						mdb.removePlayer(username);
-						break;
-					}
-					case 'GAME': {
-						mdb.disconnectPlayer(username);
-						break;
-					}
-					default:
-						break;
-				}
+			case 'ENGAGE': {
+				const engage: Engage = this.Json({ message: data, target: Engage.instance });
+				mdb.connectPlayer(mdb.getPlayer(username), engage.gid);
 				break;
 			}
 			case 'INVITE': {
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log('INVITE', username, invite);
 				mdb.createInvitation(username, invite.recipient);
 				break;
 			}
 			case 'ACCEPT': {
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log('ACCEPT', username, invite);
 				mdb.acceptInvitation(invite.recipient, username);
 				break;
 			}
 			case 'REJECT': {
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log('REJECT', username, invite);
 				mdb.declineInvitation(invite.recipient, username);
 				break;
 			}
 			case 'DELETE': {
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				console.log('DELETE', username, invite);
 				if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(username);
 				else mdb.deleteRejectedInvitation(invite.recipient, username);
 				break;
