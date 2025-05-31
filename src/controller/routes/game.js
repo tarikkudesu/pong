@@ -7,22 +7,22 @@ export default async (fastify) => {
 			try {
 				WS.useParser(message.toString(), connection);
 			} catch (error) {
+				connection.send(WS.ErrorMessage(error.message));
 				console.error('\x1b[31mError processing message:', error.message);
 			}
 		});
 		connection.on('error', (err) => {
 			try {
-				console.error('WebSocket error:', err);
 				WS.closeSocket(connection);
 			} catch (error) {
-				console.error('Error processing message:', error.message);
+				console.error('ONError :', error.message);
 			}
 		});
 		connection.on('close', (code, reason) => {
 			try {
 				WS.closeSocket(connection);
 			} catch (error) {
-				console.error('Error processing message:', error.message);
+				console.error('ONClose :', error.message);
 			}
 		});
 	});

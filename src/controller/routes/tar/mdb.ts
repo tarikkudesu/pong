@@ -5,6 +5,7 @@ import { BallState, Pong, PongHeight, PongWidth, randInt } from './pong.js';
 import { ClientInvitation, ClientPlayer, Frame, Hook, transformFrame, WS } from './ws-server.js';
 
 export const invitationTimeout: number = 30000;
+export const roomTimeout: number = 300000;
 
 export function generateHash(text: string): string {
 	return crypto.createHash('sha256').update(text).digest('hex');
@@ -38,6 +39,7 @@ export class Player {
 
 export class Room {
 	// * initial setup
+	public created_at: number = Date.now();
 	public playerNoBan: number = 1;
 
 	public playerGID: string;
@@ -51,54 +53,83 @@ export class Room {
 	public playerScore: number = 0;
 	public opponentScore: number = 0;
 	public pong: Pong | null = null;
-	public connectionState: 'connecting' | 'playing' | 'disconnected' = 'connecting';
+	public connectionState: 'connecting' | 'playing' | 'disconnected' | 'finished' = 'connecting';
 	constructor(pu: string, pgid: string, ou: string, ogid: string) {
 		this.playerGID = pgid;
 		this.opponentGID = ogid;
 		this.playerUsername = pu;
 		this.opponentUsername = ou;
 	}
-	setup() {
-		if (this.player && this.opponent && this.pong) {
+	setup(): void {
+		if (!this.pong) throw new Error('Game Error: no pong');
+		if (!this.player || !this.opponent) throw new Error('Game Error: no player');
+		if (this.connectionState !== 'playing') throw new Error('Game Error: not playing');
+		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Game Error: no socket');
+		let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
+		if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI * 1000;
+		this.pong.setup(angle / 1000);
+		this.sendScore();
+		this.playerNoBan += 1;
+		if (this.playerNoBan >= 5) this.playerNoBan = 1;
+	}
+	finish(winner: 'player' | 'opponent'): void {
+		if (!this.pong) throw new Error('Game Error: no pong');
+		if (!this.player || !this.opponent) throw new Error('Game Error: no player');
+		if (this.connectionState !== 'playing') throw new Error('Game Error: not playing');
+		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Game Error: no socket');
+		if (winner === 'player') {
+			this.opponent.socket.send(WS.LostMessage(this.opponent.username, this.opponent.socket.hash));
+			this.player.socket.send(WS.WonMessage(this.player.username, this.player.socket.hash));
+		} else {
+			this.opponent.socket.send(WS.WonMessage(this.opponent.username, this.opponent.socket.hash));
+			this.player.socket.send(WS.LostMessage(this.player.username, this.player.socket.hash));
+		}
+		this.opponent.socket.PLAYFREE = true;
+		this.player.socket.PLAYFREE = true;
+		this.connectionState = 'finished';
+		this.pong = null;
+	}
+	connectPlayer(player: Player): void {
+		this.player = player;
+		if (this.player && this.opponent) {
+			this.pong = new Pong();
+			this.player.socket.PLAYFREE = false;
+			this.opponent.socket.PLAYFREE = false;
+			this.player.socket.send(WS.StartMessage(this.player.username, this.player.socket.hash));
+			this.opponent.socket.send(WS.StartMessage(this.opponent.username, this.opponent.socket.hash));
 			this.connectionState = 'playing';
-			this.sendScore();
-			let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
-			if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI * 1000;
-			this.pong.setup(angle / 1000);
-			this.playerNoBan += 1;
-			if (this.playerNoBan >= 5) this.playerNoBan = 1;
 		}
 	}
-	connectPlayer(player: Player) {
-		this.player = player;
-		this.pong = new Pong();
-		this.setup();
-	}
-	connectOpponent(opponent: Player) {
+	connectOpponent(opponent: Player): void {
 		this.opponent = opponent;
-		this.pong = new Pong();
-		this.setup();
+		if (this.player && this.opponent) {
+			this.pong = new Pong();
+			this.player.socket.PLAYFREE = false;
+			this.opponent.socket.PLAYFREE = false;
+			this.player.socket.send(WS.StartMessage(this.player.username, this.player.socket.hash));
+			this.opponent.socket.send(WS.StartMessage(this.opponent.username, this.opponent.socket.hash));
+			this.connectionState = 'playing';
+		}
 	}
-	sendScore() {
-		if (this.connectionState !== 'playing') return;
-		if (!this.player || !this.opponent) throw new Error('No player connected');
-		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Closed socket');
+	sendScore(): void {
+		if (!this.pong) throw new Error('Game Error: no pong');
+		if (!this.player || !this.opponent) throw new Error('Game Error: no player');
+		if (this.connectionState !== 'playing') throw new Error('Game Error: not playing');
+		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Game Error: no socket');
 		this.player.socket.send(WS.ScoreMessage(this.player.username, this.player.socket.hash, this.opponentScore, this.playerScore));
 		this.opponent.socket.send(WS.ScoreMessage(this.opponent.username, this.opponent.socket.hash, this.playerScore, this.opponentScore));
 	}
-	sendFrame() {
-		if (this.connectionState !== 'playing' || !this.pong) return;
-		if (!this.player || !this.opponent) throw new Error('No player connected');
-		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Closed socket');
+	sendFrame(): void {
+		if (!this.pong) throw new Error('Game Error: no pong');
+		if (!this.player || !this.opponent) throw new Error('Game Error: no player');
+		if (this.connectionState !== 'playing') throw new Error('Game Error: not playing');
+		if (!this.player.socket.OPEN || !this.opponent.socket.OPEN) throw new Error('Game Error: no socket');
 		const f: Frame = new Frame(this.pong.ball, this.pong.rightPaddle, this.pong.leftpaddle);
 		this.player.socket.send(WS.FrameMessage(this.player.username, this.player.socket.hash, transformFrame(f)));
 		this.opponent.socket.send(WS.FrameMessage(this.opponent.username, this.opponent.socket.hash, f));
 	}
-	updateGame() {
-		if (this.connectionState !== 'playing' || !this.player || !this.opponent) return;
-		if (!this.player?.socket.OPEN) throw new Error('player disconnected: ' + this.player.username);
-		if (!this.opponent?.socket.OPEN) throw new Error('opponent disconnected: ' + this.opponent.username);
-		if (this.pong) {
+	update(): void {
+		if (this.connectionState === 'playing' && this.pong) {
 			const ballState: BallState = this.pong.updateFrame();
 			if (ballState === BallState.OUT_RIGHT) {
 				this.opponentScore += 1;
@@ -106,23 +137,10 @@ export class Room {
 			} else if (ballState === BallState.OUT_LEFT) {
 				this.playerScore += 1;
 				this.setup();
-			} else {
-				this.sendFrame();
-			}
-			if (this.playerScore >= 7) {
-				this.player.socket.send(WS.LostMessage(this.player.username, this.player.socket.hash));
-				this.opponent.socket.send(WS.WonMessage(this.opponent.username, this.opponent.socket.hash));
-				this.opponent.socket.PLAYFREE = true;
-				this.player.socket.PLAYFREE = true;
-				this.pong = null;
-			} else if (this.opponentScore >= 7) {
-				this.opponent.socket.send(WS.LostMessage(this.opponent.username, this.opponent.socket.hash));
-				this.player.socket.send(WS.WonMessage(this.player.username, this.player.socket.hash));
-				this.opponent.socket.PLAYFREE = true;
-				this.player.socket.PLAYFREE = true;
-				this.pong = null;
-			}
-		}
+			} else this.sendFrame();
+			if (this.playerScore >= 7) this.finish('opponent');
+			else if (this.opponentScore >= 7) this.finish('player');
+		} else if (this.connectionState === 'playing') this.setup();
 	}
 }
 
@@ -167,26 +185,8 @@ class Mdb {
 	// * connnect player to a room
 	connectPlayer(player: Player, gid: string) {
 		this.rooms.forEach((value) => {
-			if (value.playerUsername === player.username && value.playerGID === gid) {
-				value.connectPlayer(player);
-				player.socket.PLAYFREE = false;
-			} else if (value.opponentUsername === player.username && value.opponentGID === gid) {
-				value.connectOpponent(player);
-				player.socket.PLAYFREE = false;
-			}
-		});
-	}
-
-	// ! May not be needed
-	disconnectPlayer(username: string): void {
-		this.rooms.forEach((value) => {
-			if (value.playerUsername === username) {
-				this.getPlayer(username).socket.PLAYFREE = true;
-				value.player = null;
-			} else if (value.opponentUsername === username) {
-				this.getPlayer(username).socket.PLAYFREE = true;
-				value.opponent = null;
-			}
+			if (value.playerUsername === player.username && value.playerGID === gid) value.connectPlayer(player);
+			else if (value.opponentUsername === player.username && value.opponentGID === gid) value.connectOpponent(player);
 		});
 	}
 
@@ -198,10 +198,34 @@ class Mdb {
 		});
 	}
 
+	// * remove non functional rooms
+	reduceRooms() {
+		this.rooms.forEach((value, key) => {
+			if (Date.now() - value.created_at > roomTimeout || value.connectionState === 'finished') this.rooms.delete(key);
+			if (value.connectionState === 'disconnected' && value.player?.socket.OPEN && !value.opponent?.socket.OPEN)
+				this.rooms.delete(key);
+			if (value.connectionState === 'disconnected' && value.opponent?.socket.OPEN) {
+				value.opponent.socket.send(WS.StopMessage(value.opponent.username, value.opponent.socket.hash));
+				value.opponent.socket.send(WS.ErrorMessage('Opponent Disconnected'));
+				this.rooms.delete(key);
+			}
+			if (value.connectionState === 'disconnected' && value.player?.socket.OPEN) {
+				value.player.socket.send(WS.StopMessage(value.player.username, value.player.socket.hash));
+				value.player.socket.send(WS.ErrorMessage('Opponent Disconnected'));
+				this.rooms.delete(key);
+			}
+		});
+	}
+
 	// * update rooms
 	updateRooms(): void {
-		this.rooms.forEach((value) => {
-			value.updateGame();
+		this.rooms.forEach((value, key) => {
+			try {
+				value.update();
+			} catch (err: any) {
+				value.connectionState = 'disconnected';
+				console.log(err.message);
+			}
 		});
 	}
 
@@ -299,15 +323,12 @@ class Mdb {
 	}
 	// * delete all expired invitation
 	deleteExpiredInvitations() {
-		[...this.invitations.values()].forEach((ele) => {
-			if (Date.now() - ele.created_at > invitationTimeout) {
-				this.invitations.delete(ele.sender + ele.recipient);
-			}
+		this.invitations.forEach((value, key) => {
+			if (Date.now() - value.created_at > invitationTimeout) this.invitations.delete(key);
 		});
 	}
 	// * cancel all player invitations
 	cancelAllPlayerInvitations(sender: string) {
-		if (!this.checkIfPlayerExists(sender)) throw new Error("cancel all player invitations: player doesn't exist");
 		const invitations: Invitation[] = [];
 		this.invitations.forEach((value) => {
 			if (value.sender === sender) invitations.push(value);
@@ -322,10 +343,8 @@ class Mdb {
 	}
 	// * delete all rejected invitation for a specific user
 	deleteAllRejectedInvitations(sender: string): void {
-		[...this.invitations.values()].forEach((invite) => {
-			if (invite.sender === sender && invite.invite_status === 'declined') {
-				this.invitations.delete(invite.sender + invite.recipient);
-			}
+		this.invitations.forEach((value, key) => {
+			if (value.sender === sender && value.invite_status === 'declined') this.invitations.delete(value.sender + value.recipient);
 		});
 	}
 	// * get all player invitations
@@ -341,15 +360,18 @@ class Mdb {
 	 *                                                         MAIN                                                         *
 	 ************************************************************************************************************************/
 
-	updateMdb() {
-		this.deleteExpiredInvitations();
-	}
-	updateClient() {
+	sendInvitations() {
 		this.players.forEach((value) => {
 			if (value.socket.readyState === WebSocket.OPEN && value.socket.PLAYFREE === true) {
 				value.socket.send(
 					WS.InvitationMessage(value.username, value.socket.hash, () => this.getAllPlayerInvitations(value.username))
 				);
+			}
+		});
+	}
+	sendPool() {
+		this.players.forEach((value) => {
+			if (value.socket.readyState === WebSocket.OPEN && value.socket.PLAYFREE === true) {
 				value.socket.send(WS.PoolMessage(value.username, value.socket.hash, () => this.getPool(value.username)));
 			}
 		});

@@ -2,6 +2,8 @@ import { Ball, Vector, Paddle, PongWidth } from './pong.js';
 import { mdb, Player } from './mdb.js';
 import { WebSocket } from 'ws';
 
+import _ from 'lodash';
+
 declare module 'ws' {
 	interface WebSocket {
 		PLAYFREE: boolean;
@@ -9,8 +11,6 @@ declare module 'ws' {
 		hash: string;
 	}
 }
-
-import _ from 'lodash';
 
 // ! shared ------------------------------------------------------------------------------------------
 
@@ -245,8 +245,8 @@ class WSS {
 	}
 
 	// ? Protocole Message Builders
-	ErrorMessage(username: string, hash: string, error: string): string {
-		return JSON.stringify(new Message({ username, hash, message: 'ERROR', data: new WSError(error) }));
+	ErrorMessage(error: string) {
+		return JSON.stringify(new Message({ username: '', hash: '', message: 'ERROR', data: new WSError(error) }));
 	}
 
 	// * POOL
@@ -287,7 +287,6 @@ class WSS {
 	 ************************************************************************************************************************/
 	useParser(json: string, socket: WebSocket) {
 		const { username, message, hash, data } = this.Json({ message: json, target: Message.instance });
-		// console.log("\x1b[33m", username, )
 		if (message !== 'CONNECT' && hash !== mdb.getPlayerHash(username))
 			throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
 		switch (message) {
@@ -329,22 +328,24 @@ class WSS {
 				break;
 			}
 			default:
-				throw new Error('Invalid JSON');
+				throw new Error('UNKNOWN COMMAND');
 		}
-		mdb.updateClient();
+		mdb.sendInvitations();
+		mdb.sendPool();
 	}
 	closeSocket(socket: WebSocket) {
 		if (socket.username) {
-			mdb.removePlayer(socket.username);
 			mdb.cancelAllPlayerInvitations(socket.username);
+			mdb.removePlayer(socket.username);
 		}
-		mdb.updateClient();
+		mdb.sendInvitations();
+		mdb.sendPool();
 	}
 	main() {
 		setInterval(() => {
-			mdb.updateMdb();
-			mdb.updateClient();
+			mdb.deleteExpiredInvitations();
 			mdb.updateRooms();
+			mdb.reduceRooms();
 		}, 1000 / 60);
 	}
 }
