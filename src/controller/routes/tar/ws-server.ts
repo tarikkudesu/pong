@@ -107,6 +107,54 @@ export class Invitations {
 }
 
 // * Game
+
+interface GameProps {
+	start?: boolean;
+	stop?: boolean;
+	won?: boolean;
+	lost?: boolean;
+	player: number;
+	opponent: number;
+	rightPaddle: Paddle;
+	leftPaddle: Paddle;
+	ball: Ball;
+}
+
+export class Game {
+	public player: number;
+	public opponent: number;
+	public start: boolean = false;
+	public stop: boolean = false;
+	public lost: boolean = false;
+	public won: boolean = false;
+	public ballX: number;
+	public ballY: number;
+	public ballRadius: number;
+	public paddleRadius: number;
+	public paddleHeight: number;
+	public leftPaddlePosX: number;
+	public leftPaddlePosY: number;
+	public rightPaddlePosX: number;
+	public rightPaddlePosY: number;
+	constructor({ player, opponent, ball, rightPaddle, leftPaddle, start, stop, won, lost }: GameProps) {
+		this.player = player;
+		this.opponent = opponent;
+		this.ballX = Math.ceil(ball.pos.x);
+		this.ballY = Math.ceil(ball.pos.y);
+		this.ballRadius = Math.ceil(ball.radius);
+		this.paddleRadius = Math.ceil(rightPaddle.radius);
+		this.rightPaddlePosX = Math.ceil(rightPaddle.pos.x);
+		this.rightPaddlePosY = Math.ceil(rightPaddle.pos.y);
+		this.leftPaddlePosX = Math.ceil(leftPaddle.pos.x);
+		this.leftPaddlePosY = Math.ceil(leftPaddle.pos.y);
+		this.paddleHeight = Math.ceil(rightPaddle.length);
+		this.start = start !== undefined ? start : false;
+		this.stop = stop !== undefined ? stop : false;
+		this.lost = lost !== undefined ? lost : false;
+		this.won = won !== undefined ? won : false;
+	}
+}
+
 export class Start {
 	public start: string;
 	constructor() {
@@ -263,24 +311,28 @@ class WSS {
 		return JSON.stringify(new Message({ username, hash, message: 'INVITATIONS', data: new Invitations(getInvitions()) }));
 	}
 	// * GAME
+	GameMessage(username: string, hash: string, game: Game) {
+		return JSON.stringify(new Message({ username, hash, message: 'GAME', data: game }));
+	}
+
 	StartMessage(username: string, hash: string): string {
-		return JSON.stringify(new Message({ username, hash, message: 'START', data: new Start() }));
-	}
+		return JSON.stringify(new Message({ username, hash, message: 'START', data: new Start() })); // ! deprecated
+	} // ! deprecated
 	StopMessage(username: string, hash: string): string {
-		return JSON.stringify(new Message({ username, hash, message: 'STOP', data: new Stop() }));
-	}
+		return JSON.stringify(new Message({ username, hash, message: 'STOP', data: new Stop() })); // ! deprecated
+	} // ! deprecated
 	FrameMessage(username: string, hash: string, frame: Frame): string {
-		return JSON.stringify(new Message({ username, hash, message: 'FRAME', data: frame }));
-	}
+		return JSON.stringify(new Message({ username, hash, message: 'FRAME', data: frame })); // ! deprecated
+	} // ! deprecated
 	ScoreMessage(username: string, hash: string, player: number, opponent: number): string {
-		return JSON.stringify(new Message({ username, hash, message: 'SCORE', data: new Score(player, opponent) }));
-	}
+		return JSON.stringify(new Message({ username, hash, message: 'SCORE', data: new Score(player, opponent) })); // ! deprecated
+	} // ! deprecated
 	LostMessage(username: string, hash: string): string {
-		return JSON.stringify(new Message({ username, hash, message: 'LOST', data: new Lost() }));
-	}
+		return JSON.stringify(new Message({ username, hash, message: 'LOST', data: new Lost() })); // ! deprecated
+	} // ! deprecated
 	WonMessage(username: string, hash: string): string {
-		return JSON.stringify(new Message({ username, hash, message: 'WON', data: new Won() }));
-	}
+		return JSON.stringify(new Message({ username, hash, message: 'WON', data: new Won() })); // ! deprecated
+	} // ! deprecated
 
 	/************************************************************************************************************************
 	 *                                                        PARSER                                                        *
@@ -288,7 +340,8 @@ class WSS {
 	useParser(json: string, socket: WebSocket) {
 		const { username, message, hash, data } = this.Json({ message: json, target: Message.instance });
 		if (message !== 'CONNECT' && hash !== mdb.getPlayerHash(username))
-			throw new Error('hash mismatch ' + mdb.getPlayerHash(username) + ' ' + hash);
+			throw new Error('hash mismatch ' + hash + ' ' + mdb.getPlayerHash(username));
+		console.log(message);
 		switch (message) {
 			case 'CONNECT':
 				const connect: Connect = this.Json({ message: data, target: Connect.instance });
@@ -301,6 +354,10 @@ class WSS {
 				mdb.connectPlayer(mdb.getPlayer(username), engage.gid);
 				break;
 			}
+			// case 'UPDATE': {
+			// 	console.log(username, 'UPDATE');
+			// 	break;
+			// }
 			case 'INVITE': {
 				const invite: Invite = this.Json({ message: data, target: Invite.instance });
 				mdb.createInvitation(username, invite.recipient);

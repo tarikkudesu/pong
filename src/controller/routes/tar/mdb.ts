@@ -38,7 +38,6 @@ export class Player {
 }
 
 export class Room {
-	// * initial setup
 	public created_at: number = Date.now();
 	public playerNoBan: number = 1;
 
@@ -47,12 +46,13 @@ export class Room {
 	public playerUsername: string;
 	public opponentUsername: string;
 
+	public pong: Pong | null = null;
 	public player: Player | null = null;
 	public opponent: Player | null = null;
 
 	public playerScore: number = 0;
 	public opponentScore: number = 0;
-	public pong: Pong | null = null;
+	winner: 'player' | 'opponent' | 'noone' = 'noone';
 	public connectionState: 'connecting' | 'playing' | 'disconnected' | 'finished' = 'connecting';
 	constructor(pu: string, pgid: string, ou: string, ogid: string) {
 		this.playerGID = pgid;
@@ -129,7 +129,7 @@ export class Room {
 		this.opponent.socket.send(WS.FrameMessage(this.opponent.username, this.opponent.socket.hash, f));
 	}
 	update(): void {
-		if (this.connectionState === 'playing' && this.pong) {
+		if (this.pong) {
 			const ballState: BallState = this.pong.updateFrame();
 			if (ballState === BallState.OUT_RIGHT) {
 				this.opponentScore += 1;
@@ -137,7 +137,8 @@ export class Room {
 			} else if (ballState === BallState.OUT_LEFT) {
 				this.playerScore += 1;
 				this.setup();
-			} else this.sendFrame();
+			}
+			// this.player?.socket.send(WS.GameMessage(this.player))
 			if (this.playerScore >= 7) this.finish('opponent');
 			else if (this.opponentScore >= 7) this.finish('player');
 		} else if (this.connectionState === 'playing') this.setup();
@@ -184,10 +185,17 @@ class Mdb {
 
 	// * connnect player to a room
 	connectPlayer(player: Player, gid: string) {
+		let r: boolean = false;
 		this.rooms.forEach((value) => {
-			if (value.playerUsername === player.username && value.playerGID === gid) value.connectPlayer(player);
-			else if (value.opponentUsername === player.username && value.opponentGID === gid) value.connectOpponent(player);
+			if (value.playerUsername === player.username && value.playerGID === gid) {
+				value.connectPlayer(player);
+				r = true;
+			} else if (value.opponentUsername === player.username && value.opponentGID === gid) {
+				value.connectOpponent(player);
+				r = true;
+			}
 		});
+		if (r === false) throw new Error('You are not authorized in here');
 	}
 
 	// * room hook
@@ -237,6 +245,7 @@ class Mdb {
 	addPlayer(player: Player): void {
 		if (this.checkIfPlayerExists(player.username)) throw new Error('Player already exists');
 		this.players.set(player.username, player);
+		console.log([...this.players.keys()]);
 	}
 	// * remove player
 	removePlayer(username: string) {
