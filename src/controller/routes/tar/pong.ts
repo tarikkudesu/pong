@@ -57,7 +57,7 @@ export class Ball {
 		this.velocity = velocity;
 	}
 	reposition(): void {
-		this.pos = this.pos.add(this.velocity.mult(10));
+		this.pos = this.pos.add(this.velocity.mult(5));
 	}
 }
 
@@ -151,7 +151,7 @@ export class Pong {
 	public LeftWall: Wall = new Wall({ start: new Vector(0, 0), end: new Vector(0, 0) });
 	public ball: Ball = new Ball({ pos: new Vector(0, 0), radius: 0, velocity: new Vector(0, 0) });
 	public rightPaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
-	public leftpaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
+	public leftPaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
 
 	constructor() {
 		// * Create Walls
@@ -166,16 +166,16 @@ export class Pong {
 			end: new Vector(PongWidth - this.paddleDistance, PongHeight / 2 + this.paddleHeight),
 			radius: this.paddleRadius,
 			constrains: new Vector(
-				this.paddleHeight + this.paddleRadius + this.ballRadius * 2,
+				this.paddleHeight + this.paddleRadius + this.ballRadius,
 				PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius
 			),
 		});
-		this.leftpaddle = new Paddle({
+		this.leftPaddle = new Paddle({
 			start: new Vector(this.paddleDistance, PongHeight / 2 - this.paddleHeight),
 			end: new Vector(this.paddleDistance, PongHeight / 2 + this.paddleHeight),
 			radius: this.paddleRadius,
 			constrains: new Vector(
-				this.paddleHeight + this.paddleRadius + this.ballRadius * 2,
+				this.paddleHeight + this.paddleRadius + this.ballRadius,
 				PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius
 			),
 		});
@@ -202,7 +202,7 @@ export class Pong {
 		if (down) this.keys.DOWN_R = true;
 		else this.keys.DOWN_R = false;
 
-		this.leftpaddle.move(up, down);
+		this.leftPaddle.move(up, down);
 	}
 
 	upddateBall(): BallState {
@@ -210,9 +210,9 @@ export class Pong {
 			this.penetration_resolution_ball_paddle(this.ball, this.rightPaddle);
 			this.collision_response_ball_paddle(this.ball, this.rightPaddle);
 		}
-		if (this.collision_ball_paddle(this.ball, this.leftpaddle)) {
-			this.penetration_resolution_ball_paddle(this.ball, this.leftpaddle);
-			this.collision_response_ball_paddle(this.ball, this.leftpaddle);
+		if (this.collision_ball_paddle(this.ball, this.leftPaddle)) {
+			this.penetration_resolution_ball_paddle(this.ball, this.leftPaddle);
+			this.collision_response_ball_paddle(this.ball, this.leftPaddle);
 		}
 		if (this.collision_detection_ball_wall(this.ball, this.TopWall)) {
 			this.penetration_resolution_ball_wall(this.ball, this.TopWall);
@@ -232,12 +232,12 @@ export class Pong {
 			this.penetration_resolution_ball_paddle(this.ball, this.rightPaddle);
 			this.collision_response_ball_paddle(this.ball, this.rightPaddle);
 		}
-		if (this.collision_ball_paddle(this.ball, this.leftpaddle)) {
-			this.penetration_resolution_ball_paddle(this.ball, this.leftpaddle);
-			this.collision_response_ball_paddle(this.ball, this.leftpaddle);
+		if (this.collision_ball_paddle(this.ball, this.leftPaddle)) {
+			this.penetration_resolution_ball_paddle(this.ball, this.leftPaddle);
+			this.collision_response_ball_paddle(this.ball, this.leftPaddle);
 		}
 		this.rightPaddle.reposition();
-		this.leftpaddle.reposition();
+		this.leftPaddle.reposition();
 	}
 
 	// * Collisions
