@@ -18,7 +18,7 @@ export class Doom {
 	private BomPos: number = 0;
 	private table: string[];
 	public opponent: string;
-	private timer: number;
+	public timer: number;
 	public player: string;
 	public myturn: string;
 
@@ -59,23 +59,17 @@ interface ClientCardOfDoomProps {
 	start: boolean;
 	myturn: boolean;
 	cards: string[];
-	playerScore: number;
-	opponentScore: number;
 }
 
 export class ClientCardOfDoom {
 	public cards: string[];
-	public playerScore: number;
-	public opponentScore: number;
 	public start: boolean = false;
 	public stop: boolean = false;
 	public lost: boolean = false;
 	public won: boolean = false;
 	public myturn: boolean;
 	public timer: number;
-	constructor({ cards, playerScore, opponentScore, myturn, timer, start, stop, lost, won }: ClientCardOfDoomProps) {
-		this.opponentScore = opponentScore;
-		this.playerScore = playerScore;
+	constructor({ cards, myturn, timer, start, stop, lost, won }: ClientCardOfDoomProps) {
 		this.myturn = myturn;
 		this.timer = timer;
 		this.start = start;

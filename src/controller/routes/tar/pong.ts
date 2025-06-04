@@ -191,6 +191,8 @@ export class Pong {
 				PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius
 			),
 		});
+
+		setTimeout(() => this.setup(), 1000);
 	}
 	setup(): void {
 		let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
@@ -329,3 +331,5 @@ export class Pong {
 		if (this.playerNoBan >= 5) this.playerNoBan = 1;
 	}
 }
+
+// ! END
