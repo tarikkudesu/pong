@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { WebSocket } from 'ws';
 import { randomUUID } from 'crypto';
 import { BallState, Pong, PongHeight, PongWidth, randInt } from './pong.js';
-import { ClientCardOfDoom, ClientInvitation, ClientPlayer, ClientPong, Flip, Hook, transformFrame, WS } from './ws-server.js';
+import { ClientCardOfDoom, ClientInvitation, ClientPlayer, ClientPong, Flip, Hook, Play, transformFrame, WS } from './ws-server.js';
 import { Doom } from './CardOfDoom.js';
 
 export const invitationTimeout: number = 30000;
@@ -52,27 +52,6 @@ export class Room {
 		this.opponent = ou;
 		this.player = pu;
 	}
-
-	update(): void {
-		if (this.game && this.game instanceof Pong) {
-			const ballState: BallState = this.game.updateFrame();
-			if (ballState === BallState.OUT_RIGHT) {
-				this.opponentScore += 1;
-				let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
-				if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI * 1000;
-				this.game.setup(angle / 1000);
-				this.playerNoBan += 1;
-				if (this.playerNoBan >= 5) this.playerNoBan = 1;
-			} else if (ballState === BallState.OUT_LEFT) {
-				this.playerScore += 1;
-				let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
-				if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI * 1000;
-				this.game.setup(angle / 1000);
-				this.playerNoBan += 1;
-				if (this.playerNoBan >= 5) this.playerNoBan = 1;
-			}
-		}
-	}
 }
 
 class Mdb {
@@ -110,6 +89,8 @@ class Mdb {
 	// * connnect player to a room
 	connectPlayer(player: string, gid: string, game: 'pong' | 'card of doom') {
 		const r: Room = this.getRoom(gid);
+		const p: Player = this.getPlayer(player);
+		p.socket.PLAYFREE = false;
 		if (player !== r.player && player !== r.opponent) throw new Error('You are not allowed to be here');
 		if (player === r.player && r.roomState === 'connecting') r.roomState = 'player-1-connected';
 		else if (player === r.player && r.roomState === 'player-1-connected') r.roomState = 'player-2-connected';
@@ -122,7 +103,7 @@ class Mdb {
 				let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
 				if (r.playerNoBan === 3 || r.playerNoBan === 4) angle += Math.PI * 1000;
 				r.game.setup(angle / 1000);
-			} else r.game = new Doom();
+			} else r.game = new Doom(r.player, r.opponent);
 		}
 	}
 
@@ -136,41 +117,21 @@ class Mdb {
 	}
 	roomFlip(username: string, flip: Flip): void {
 		const r: Room = this.getRoom(flip.gid);
-		if (r.game && r.game instanceof Doom && (username === r.player || username === r.opponent)) {
-			if (username === r.player && r.playerNoBan === 0 && r.game.flip(flip.pos)) {
-				r.finished_at = Date.now();
-				r.roomState = 'finished';
-				r.winner = 'player';
-			} else if (username === r.opponent && r.playerNoBan === 1 && r.game.flip(flip.pos)) {
-				r.finished_at = Date.now();
-				r.roomState = 'finished';
-				r.winner = 'opponent';
-			}
-			if (username === r.player && r.playerNoBan === 0) r.playerNoBan = 1;
-			else if (username === r.opponent && r.playerNoBan === 1) r.playerNoBan = 0;
-		}
+		if (r.game && r.game instanceof Doom && (username === r.player || username === r.opponent)) r.game.flip(username, flip.pos);
+		else throw new Error('Not allowed');
 	}
 
 	// * update rooms
 	updateRooms(): void {
-		this.rooms.forEach((value, key) => {
-			if (value.roomState === 'playing') value.update();
-			if (value.playerScore >= 7) {
-				value.finished_at = Date.now();
-				value.roomState = 'finished';
-				value.winner = 'opponent';
-			} else if (value.opponentScore >= 7) {
-				value.finished_at = Date.now();
-				value.roomState = 'finished';
-				value.winner = 'player';
-			}
+		this.rooms.forEach((room, key) => {
+			if (room.game) room.game.update();
 			try {
-				if (value.game && value.game instanceof Pong) {
-					const player: Player = this.getPlayer(value.player);
-					const opponent: Player = this.getPlayer(value.opponent);
-					if (!player.socket.OPEN || !opponent.socket.OPEN) throw new Error('Players Are disconnected');
-					const { playerScore, opponentScore, winner, roomState } = value;
-					const { ball, leftPaddle, rightPaddle } = value.game;
+				const player: Player = this.getPlayer(room.player);
+				const opponent: Player = this.getPlayer(room.opponent);
+				if (!player.socket.OPEN || !opponent.socket.OPEN) throw new Error('Players Are disconnected');
+				const { playerScore, opponentScore, winner, roomState } = room;
+				if (room.game && room.game instanceof Pong) {
+					const { ball, leftPaddle, rightPaddle } = room.game;
 					player.socket.send(
 						WS.PongMessage(
 							player.username,
@@ -213,11 +174,7 @@ class Mdb {
 							})
 						)
 					);
-				} else if (value.game && value.game instanceof Doom) {
-					const player: Player = this.getPlayer(value.player);
-					const opponent: Player = this.getPlayer(value.opponent);
-					if (!player.socket.OPEN || !opponent.socket.OPEN) throw new Error('Players Are disconnected');
-					const { playerScore, opponentScore, winner, roomState } = value;
+				} else if (room.game && room.game instanceof Doom) {
 					player.socket.send(
 						WS.DoomMessage(
 							player.username,
@@ -226,7 +183,7 @@ class Mdb {
 							new ClientCardOfDoom({
 								playerScore,
 								opponentScore,
-								cards: value.game.getMap(),
+								cards: room.game.getMap(),
 								won: winner === 'player',
 								lost: winner === 'opponent',
 								start:
@@ -243,7 +200,7 @@ class Mdb {
 							new ClientCardOfDoom({
 								playerScore,
 								opponentScore,
-								cards: value.game.getMap(),
+								cards: room.game.getMap(),
 								won: winner === 'opponent',
 								lost: winner === 'player',
 								start:
@@ -254,12 +211,12 @@ class Mdb {
 					);
 				}
 			} catch (err: any) {
-				value.roomState = 'disconnected';
-				value.game = null;
+				room.roomState = 'disconnected';
+				room.game = null;
 			}
-			if (value.roomState === 'connecting' && Date.now() - value.created_at > roomConnectionTimeout) this.rooms.delete(key);
-			if (value.roomState === 'finished' && Date.now() - value.finished_at > roomFinishTimeout) this.rooms.delete(key);
-			else if (value.roomState === 'disconnected') this.rooms.delete(key);
+			if (room.roomState === 'connecting' && Date.now() - room.created_at > roomConnectionTimeout) this.rooms.delete(key);
+			if (room.roomState === 'finished' && Date.now() - room.finished_at > roomFinishTimeout) this.rooms.delete(key);
+			else if (room.roomState === 'disconnected') this.rooms.delete(key);
 		});
 	}
 
@@ -355,6 +312,7 @@ class Mdb {
 		const sen: Player = this.getPlayer(sender);
 		const rec: Player = this.getPlayer(recipient);
 		this.invitations.delete(sen.username + rec.username);
+		console.log(sen.username, rec.username, this.invitations);
 	}
 	// * delete all expired invitation
 	deleteExpiredInvitations() {

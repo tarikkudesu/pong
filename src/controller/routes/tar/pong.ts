@@ -140,6 +140,15 @@ class Keys {
 }
 
 export class Pong {
+	// * player data
+	public player: string;
+	public opponent: string;
+	public winner: string = '';
+	public playerScore: number = 0;
+	public opponentScore: number = 0;
+	public playerNoBan: number = 1;
+
+	// * game data
 	public keys: Keys = new Keys();
 	public ballRadius: number = 10; // * Customizable
 	public paddleHeight: number = 60; // * Customizable
@@ -153,7 +162,10 @@ export class Pong {
 	public rightPaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
 	public leftPaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
 
-	constructor() {
+	constructor(player: string, opponent: string) {
+		this.player = player;
+		this.opponent = opponent;
+
 		// * Create Walls
 		this.TopWall = new Wall({ start: new Vector(0, 0), end: new Vector(PongWidth, 0) });
 		this.RightWall = new Wall({ start: new Vector(PongWidth, 0), end: new Vector(PongWidth, PongHeight) });
@@ -180,7 +192,9 @@ export class Pong {
 			),
 		});
 	}
-	setup(angle: number): void {
+	setup(): void {
+		let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
+		if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI * 1000;
 		// * Create ball
 		this.ball = new Ball({
 			pos: new Vector(PongWidth / 2, PongHeight / 2),
@@ -297,11 +311,21 @@ export class Pong {
 		}
 	}
 
-	// * Collision Paddle Ball
-
 	// * Main Frame
-	updateFrame(): BallState {
+	update(): void {
 		this.updatePaddles();
-		return this.upddateBall();
+		const ballState: BallState = this.upddateBall();
+		if (ballState === BallState.OUT_RIGHT) {
+			this.opponentScore += 1;
+			this.playerNoBan += 1;
+			setTimeout(() => this.setup(), 1000);
+		} else if (ballState === BallState.OUT_LEFT) {
+			this.playerScore += 1;
+			this.playerNoBan += 1;
+			setTimeout(() => this.setup(), 1000);
+		}
+		if (this.playerScore >= 7) this.winner = this.opponent;
+		else if (this.opponentScore >= 7) this.winner = this.player;
+		if (this.playerNoBan >= 5) this.playerNoBan = 1;
 	}
 }

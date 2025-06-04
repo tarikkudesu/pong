@@ -159,7 +159,9 @@ interface ClientCardOfDoomProps {
 	won: boolean;
 	stop: boolean;
 	lost: boolean;
+	timer: number;
 	start: boolean;
+	myturn: boolean;
 	cards: string[];
 	playerScore: number;
 	opponentScore: number;
@@ -173,9 +175,13 @@ export class ClientCardOfDoom {
 	public stop: boolean = false;
 	public lost: boolean = false;
 	public won: boolean = false;
-	constructor({ cards, playerScore, opponentScore, start, stop, lost, won }: ClientCardOfDoomProps) {
+	public myturn: boolean;
+	public timer: number;
+	constructor({ cards, playerScore, opponentScore, myturn, timer, start, stop, lost, won }: ClientCardOfDoomProps) {
 		this.opponentScore = opponentScore;
 		this.playerScore = playerScore;
+		this.myturn = myturn;
+		this.timer = timer;
 		this.start = start;
 		this.cards = cards;
 		this.stop = stop;
