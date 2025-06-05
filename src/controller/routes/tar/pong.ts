@@ -191,8 +191,8 @@ export class Pong {
 				PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius
 			),
 		});
-
-		setTimeout(() => this.setup(), 1000);
+		this.setup();
+		// setTimeout(() => this.setup(), 1000);
 	}
 	setup(): void {
 		let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
@@ -314,21 +314,25 @@ export class Pong {
 	}
 
 	// * Main Frame
-	update(): void {
+	update(): boolean {
+		if (this.winner !== '') return true;
 		this.updatePaddles();
 		const ballState: BallState = this.upddateBall();
 		if (ballState === BallState.OUT_RIGHT) {
 			this.opponentScore += 1;
 			this.playerNoBan += 1;
-			setTimeout(() => this.setup(), 1000);
+			this.setup();
+			// setTimeout(() => this.setup(), 1000);
 		} else if (ballState === BallState.OUT_LEFT) {
 			this.playerScore += 1;
 			this.playerNoBan += 1;
-			setTimeout(() => this.setup(), 1000);
+			this.setup();
+			// setTimeout(() => this.setup(), 1000);
 		}
 		if (this.playerScore >= 7) this.winner = this.opponent;
 		else if (this.opponentScore >= 7) this.winner = this.player;
 		if (this.playerNoBan >= 5) this.playerNoBan = 1;
+		return false;
 	}
 }
 

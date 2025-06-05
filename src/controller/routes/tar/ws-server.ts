@@ -57,21 +57,28 @@ export class Hash {
 export class ClientPlayer {
 	public username: string;
 	public game: 'pong' | 'card of doom';
-	public invite_status: 'unsent' | 'pending' | 'accepted' | 'declined';
-	constructor(username: string, game: 'pong' | 'card of doom', invite_status: 'unsent' | 'pending' | 'accepted' | 'declined') {
-		this.invite_status = invite_status;
+	public playerStatus: 'playing' | 'free';
+	public inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined';
+	constructor(
+		username: string,
+		game: 'pong' | 'card of doom',
+		playerStatus: 'playing' | 'free',
+		inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined'
+	) {
+		this.inviteStatus = inviteStatus;
+		this.playerStatus = playerStatus;
 		this.username = username;
 		this.game = game;
 	}
-	static instance = new ClientPlayer('', 'pong', 'unsent');
+	static instance = new ClientPlayer('', 'pong', 'free', 'unsent');
 }
 
 export class ClientInvitation {
 	public sender: string;
 	public game: 'pong' | 'card of doom';
-	public invite_status: 'unsent' | 'pending' | 'accepted' | 'declined';
-	constructor(sender: string, game: 'pong' | 'card of doom', invite_status: 'unsent' | 'pending' | 'accepted' | 'declined') {
-		this.invite_status = invite_status;
+	public inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined';
+	constructor(sender: string, game: 'pong' | 'card of doom', inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined') {
+		this.inviteStatus = inviteStatus;
 		this.sender = sender;
 		this.game = game;
 	}
@@ -183,7 +190,6 @@ export class ClientCardOfDoom {
 		this.won = won;
 	}
 }
-
 
 // ! req -------------------------------------------------------------------------
 

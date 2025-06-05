@@ -3,16 +3,6 @@ import { randInt } from './pong.js';
 const cardsNum: number = 25;
 export const timeLimite: number = 10000;
 
-// TODO:          C C C C C
-// TODO:          C D C C C
-// TODO:          C C B C C
-// TODO:          C C C C C
-// TODO:          C C C C C
-
-// * C === Closed
-// * B === Bomb
-// * D === Diamond
-
 export class Doom {
 	public winner: string = '';
 	private BomPos: number = 0;
@@ -25,6 +15,7 @@ export class Doom {
 	constructor(player: string, opponent: string) {
 		this.myturn = player;
 		this.player = player;
+		this.timer = Date.now();
 		this.opponent = opponent;
 		this.table = Array(cardsNum).fill('C');
 		this.BomPos = randInt(0, cardsNum);
@@ -37,6 +28,8 @@ export class Doom {
 		)
 			return;
 		if (pos < 0 || pos >= cardsNum) throw new Error('out of bound');
+		if (this.myturn === this.player) this.myturn = this.opponent;
+		else this.myturn = this.player;
 		if (pos === this.BomPos) this.table[pos] = 'B';
 		else this.table[pos] = 'D';
 		this.timer = Date.now();
@@ -45,9 +38,11 @@ export class Doom {
 	getMap(): string[] {
 		return this.table;
 	}
-	update() {
+	update(): boolean {
+		if (this.winner !== '') return true;
 		if (Date.now() - this.timer > timeLimite && this.myturn === this.player) this.myturn = this.opponent;
 		else if (Date.now() - this.timer > timeLimite && this.myturn === this.opponent) this.myturn = this.player;
+		return false;
 	}
 }
 

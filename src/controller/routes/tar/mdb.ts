@@ -40,9 +40,8 @@ export class Player {
 export class Room {
 	public player: string;
 	public opponent: string;
-	public finished_at: number = 0;
 	public playerNoBan: number = 1;
-	public created_at: number = Date.now();
+	public date_at: number = Date.now();
 	public game: Pong | Doom | null = null;
 	public roomState: 'connecting' | 'player-1-connected' | 'player-2-connected' | 'playing' | 'disconnected' | 'finished' = 'connecting';
 	constructor(pu: string, ou: string) {
@@ -83,6 +82,19 @@ class Mdb {
 		return r;
 	}
 
+	// * remove room
+	removeRoom(room: Room, key: string) {
+		try {
+			const player = this.getPlayer(room.player);
+			player.socket.PLAYFREE = true;
+		} catch (err) {}
+		try {
+			const opponent = this.getPlayer(room.opponent);
+			opponent.socket.PLAYFREE = true;
+		} catch (err) {}
+		this.rooms.delete(key);
+	}
+
 	// * connnect player to a room
 	connectPlayer(player: string, gid: string, game: 'pong' | 'card of doom') {
 		const r: Room = this.getRoom(gid);
@@ -97,6 +109,7 @@ class Mdb {
 			r.roomState = 'playing';
 			if (game === 'pong') r.game = new Pong(r.player, r.opponent);
 			else r.game = new Doom(r.player, r.opponent);
+			r.date_at = Date.now();
 		}
 	}
 
@@ -117,7 +130,10 @@ class Mdb {
 	// * update rooms
 	updateRooms(): void {
 		this.rooms.forEach((room, key) => {
-			if (room.game) room.game.update();
+			if (room.game && room.game.update()) {
+				room.roomState = 'finished';
+				room.date_at = Date.now();
+			}
 			let player: Player | null = null;
 			let opponent: Player | null = null;
 			try {
@@ -128,6 +144,7 @@ class Mdb {
 				}
 			} catch (err) {
 				room.roomState = 'disconnected';
+				room.date_at = Date.now();
 			}
 			try {
 				opponent = this.getPlayer(room.opponent);
@@ -137,71 +154,24 @@ class Mdb {
 				}
 			} catch (err) {
 				room.roomState = 'disconnected';
+				room.date_at = Date.now();
 			}
-			try {
-				if (player !== null && room.game && room.game instanceof Pong) {
-					const { ball, leftPaddle, rightPaddle, playerScore, opponentScore, winner } = room.game;
-					player.socket.send(
-						WS.PongMessage(
-							player.username,
-							player.socket.hash,
-							'pong',
-							transformFrame(
-								new ClientPong({
-									playerScore,
-									opponentScore,
-									ball,
-									leftPaddle,
-									rightPaddle,
-									won: winner === 'player',
-									lost: winner === 'opponent',
-									start:
-										room.roomState !== 'connecting' &&
-										room.roomState !== 'player-1-connected' &&
-										room.roomState !== 'player-2-connected',
-									stop: room.roomState === 'disconnected',
-								})
-							)
-						)
-					);
-				}
-				if (opponent !== null && room.game && room.game instanceof Pong) {
-					const { ball, leftPaddle, rightPaddle, playerScore, opponentScore, winner } = room.game;
-					opponent.socket.send(
-						WS.PongMessage(
-							opponent.username,
-							opponent.socket.hash,
-							'pong',
+			if (player !== null && room.game && room.game instanceof Pong) {
+				const { ball, leftPaddle, rightPaddle, playerScore, opponentScore, winner } = room.game;
+				player.socket.send(
+					WS.PongMessage(
+						player.username,
+						player.socket.hash,
+						'pong',
+						transformFrame(
 							new ClientPong({
 								playerScore,
 								opponentScore,
 								ball,
 								leftPaddle,
 								rightPaddle,
-								won: winner === 'opponent',
-								lost: winner === 'player',
-								start:
-									room.roomState !== 'connecting' &&
-									room.roomState !== 'player-1-connected' &&
-									room.roomState !== 'player-2-connected',
-								stop: room.roomState === 'disconnected',
-							})
-						)
-					);
-				}
-				if (player !== null && room.game && room.game instanceof Doom) {
-					const { winner, myturn, timer } = room.game;
-					player.socket.send(
-						WS.DoomMessage(
-							player.username,
-							player.socket.hash,
-							'card of doom',
-							new ClientCardOfDoom({
-								timer: 2,
 								won: winner === 'player',
 								lost: winner === 'opponent',
-								cards: room.game.getMap(),
-								myturn: myturn === player.username,
 								start:
 									room.roomState !== 'connecting' &&
 									room.roomState !== 'player-1-connected' &&
@@ -209,36 +179,80 @@ class Mdb {
 								stop: room.roomState === 'disconnected',
 							})
 						)
-					);
-				}
-				if (opponent !== null && room.game && room.game instanceof Doom) {
-					const { winner, myturn, timer } = room.game;
-					opponent.socket.send(
-						WS.DoomMessage(
-							opponent.username,
-							opponent.socket.hash,
-							'card of doom',
-							new ClientCardOfDoom({
-								timer: Date.now() - timer,
-								cards: room.game.getMap(),
-								won: winner === 'opponent',
-								lost: winner === 'player',
-								myturn: myturn === opponent.username,
-								start:
-									room.roomState !== 'connecting' &&
-									room.roomState !== 'player-1-connected' &&
-									room.roomState !== 'player-2-connected',
-								stop: room.roomState === 'disconnected',
-							})
-						)
-					);
-				}
-			} catch (err: any) {
-				room.roomState = 'disconnected';
+					)
+				);
 			}
-			if (room.roomState === 'connecting' && Date.now() - room.created_at > roomConnectionTimeout) this.rooms.delete(key);
-			if (room.roomState === 'finished' && Date.now() - room.finished_at > roomFinishTimeout) this.rooms.delete(key);
-			else if (room.roomState === 'disconnected') this.rooms.delete(key);
+			if (opponent !== null && room.game && room.game instanceof Pong) {
+				const { ball, leftPaddle, rightPaddle, playerScore, opponentScore, winner } = room.game;
+				opponent.socket.send(
+					WS.PongMessage(
+						opponent.username,
+						opponent.socket.hash,
+						'pong',
+						new ClientPong({
+							playerScore,
+							opponentScore,
+							ball,
+							leftPaddle,
+							rightPaddle,
+							won: winner === 'opponent',
+							lost: winner === 'player',
+							start:
+								room.roomState !== 'connecting' &&
+								room.roomState !== 'player-1-connected' &&
+								room.roomState !== 'player-2-connected',
+							stop: room.roomState === 'disconnected',
+						})
+					)
+				);
+			}
+			if (player !== null && room.game && room.game instanceof Doom) {
+				const { winner, myturn, timer } = room.game;
+				player.socket.send(
+					WS.DoomMessage(
+						player.username,
+						player.socket.hash,
+						'card of doom',
+						new ClientCardOfDoom({
+							timer: 2,
+							won: winner === player.username,
+							lost: winner !== '' && winner !== player.username,
+							cards: room.game.getMap(),
+							myturn: myturn === player.username,
+							start:
+								room.roomState !== 'connecting' &&
+								room.roomState !== 'player-1-connected' &&
+								room.roomState !== 'player-2-connected',
+							stop: room.roomState === 'disconnected',
+						})
+					)
+				);
+			}
+			if (opponent !== null && room.game && room.game instanceof Doom) {
+				const { winner, myturn, timer } = room.game;
+				opponent.socket.send(
+					WS.DoomMessage(
+						opponent.username,
+						opponent.socket.hash,
+						'card of doom',
+						new ClientCardOfDoom({
+							timer: Date.now() - timer,
+							cards: room.game.getMap(),
+							won: winner === opponent.username,
+							lost: winner !== '' && winner !== opponent.username,
+							myturn: myturn === opponent.username,
+							start:
+								room.roomState !== 'connecting' &&
+								room.roomState !== 'player-1-connected' &&
+								room.roomState !== 'player-2-connected',
+							stop: room.roomState === 'disconnected',
+						})
+					)
+				);
+			}
+			if (room.roomState === 'connecting' && Date.now() - room.date_at > roomConnectionTimeout) this.removeRoom(room, key);
+			else if (room.roomState === 'disconnected' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(room, key);
+			else if (room.roomState === 'finished' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(room, key);
 		});
 	}
 
@@ -277,12 +291,14 @@ class Mdb {
 		const player: Player = this.getPlayer(username);
 		const pool: ClientPlayer[] = [];
 		this.players.forEach((value, key) => {
-			if (value.username !== username && value.socket.PLAYFREE === true) {
+			if (value.username !== username) {
 				try {
 					const i: Invitation = this.getInvitation(player, value);
-					pool.push(new ClientPlayer(value.username, i.game, i.invite_status));
+					pool.push(
+						new ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status)
+					);
 				} catch (err: any) {
-					pool.push(new ClientPlayer(value.username, 'pong', 'unsent'));
+					pool.push(new ClientPlayer(value.username, 'pong', value.socket.PLAYFREE === true ? 'free' : 'playing', 'unsent'));
 				}
 			}
 		});
@@ -302,6 +318,7 @@ class Mdb {
 	createInvitation(sender: string, recipient: string, game: 'pong' | 'card of doom'): void {
 		const sen: Player = this.getPlayer(sender);
 		const rec: Player = this.getPlayer(recipient);
+		if (rec.socket.PLAYFREE === false) throw new Error(rec.username + ' is currently playing');
 		if (sen.username === rec.username) throw new Error('invited yourself, pretty smart huh!!');
 		if (this.invitations.get(sen.username + rec.username))
 			throw new Error('stop trying to send invitation to this player, he already got one from you');
