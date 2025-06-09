@@ -57,7 +57,7 @@ export class Ball {
 		this.velocity = velocity;
 	}
 	reposition(): void {
-		this.pos = this.pos.add(this.velocity.mult(5));
+		this.pos = this.pos.add(this.velocity.mult(10));
 	}
 }
 
@@ -177,26 +177,20 @@ export class Pong {
 			start: new Vector(PongWidth - this.paddleDistance, PongHeight / 2 - this.paddleHeight),
 			end: new Vector(PongWidth - this.paddleDistance, PongHeight / 2 + this.paddleHeight),
 			radius: this.paddleRadius,
-			constrains: new Vector(
-				this.paddleHeight + this.paddleRadius + this.ballRadius,
-				PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius
-			),
+			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
 		});
 		this.leftPaddle = new Paddle({
 			start: new Vector(this.paddleDistance, PongHeight / 2 - this.paddleHeight),
 			end: new Vector(this.paddleDistance, PongHeight / 2 + this.paddleHeight),
 			radius: this.paddleRadius,
-			constrains: new Vector(
-				this.paddleHeight + this.paddleRadius + this.ballRadius,
-				PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius
-			),
+			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
 		});
 		this.setup();
 		// setTimeout(() => this.setup(), 1000);
 	}
 	setup(): void {
-		let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000);
-		if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI * 1000;
+		let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000) / 1000;
+		if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI;
 		// * Create ball
 		this.ball = new Ball({
 			pos: new Vector(PongWidth / 2, PongHeight / 2),
@@ -271,7 +265,7 @@ export class Pong {
 	}
 
 	// * Collision Ball Wall
-	collision_detection_ball_wall(ball: Ball, wall: Wall): Boolean {
+	collision_detection_ball_wall(ball: Ball, wall: Wall): boolean {
 		const ballToClosest = this.closestPointOnLineSigment(ball.pos, wall).subtr(ball.pos);
 		const penVect = ball.pos.subtr(this.closestPointOnLineSigment(ball.pos, wall));
 		if (Vector.dot(penVect, wall.dir.normal()) < 0) return true;

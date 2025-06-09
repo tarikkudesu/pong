@@ -21,56 +21,29 @@ export class Doom {
 		this.BomPos = randInt(0, cardsNum);
 	}
 	flip(username: string, pos: number): void {
-		if (
-			(username !== this.player && username !== this.opponent) ||
-			(username === this.player && this.myturn !== this.player) ||
-			(username === this.opponent && this.myturn !== this.opponent)
-		)
+		if ((username !== this.player && username !== this.opponent) || (username === this.player && this.myturn !== this.player) || (username === this.opponent && this.myturn !== this.opponent))
 			return;
-		if (pos < 0 || pos >= cardsNum) throw new Error('out of bound');
+		if (pos < 0 || pos >= cardsNum) return;
 		if (this.myturn === this.player) this.myturn = this.opponent;
 		else this.myturn = this.player;
 		if (pos === this.BomPos) this.table[pos] = 'B';
 		else this.table[pos] = 'D';
 		this.timer = Date.now();
-		if (this.table[pos] === 'B') this.winner = username;
+		if (this.table[pos] === 'B' && username === this.player) this.winner = this.opponent;
+		else if (this.table[pos] === 'B' && username === this.opponent) this.winner = this.player;
 	}
 	getMap(): string[] {
 		return this.table;
 	}
 	update(): boolean {
 		if (this.winner !== '') return true;
-		if (Date.now() - this.timer > timeLimite && this.myturn === this.player) this.myturn = this.opponent;
-		else if (Date.now() - this.timer > timeLimite && this.myturn === this.opponent) this.myturn = this.player;
+		if (Date.now() - this.timer > timeLimite && this.myturn === this.player) {
+			this.myturn = this.opponent;
+			this.timer = Date.now();
+		} else if (Date.now() - this.timer > timeLimite && this.myturn === this.opponent) {
+			this.myturn = this.player;
+			this.timer = Date.now();
+		}
 		return false;
-	}
-}
-
-interface ClientCardOfDoomProps {
-	won: boolean;
-	stop: boolean;
-	lost: boolean;
-	timer: number;
-	start: boolean;
-	myturn: boolean;
-	cards: string[];
-}
-
-export class ClientCardOfDoom {
-	public cards: string[];
-	public start: boolean = false;
-	public stop: boolean = false;
-	public lost: boolean = false;
-	public won: boolean = false;
-	public myturn: boolean;
-	public timer: number;
-	constructor({ cards, myturn, timer, start, stop, lost, won }: ClientCardOfDoomProps) {
-		this.myturn = myturn;
-		this.timer = timer;
-		this.start = start;
-		this.cards = cards;
-		this.stop = stop;
-		this.lost = lost;
-		this.won = won;
 	}
 }

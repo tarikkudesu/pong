@@ -1,5 +1,5 @@
-import { Ball, Vector, Paddle, PongWidth } from './pong.js';
-import { mdb, Player } from './mdb.js';
+import { Ball, Paddle, PongWidth } from './pong.js';
+import { mdb, Player, Room } from './mdb.js';
 import { WebSocket } from 'ws';
 
 import _ from 'lodash';
@@ -9,6 +9,7 @@ declare module 'ws' {
 		PLAYFREE: boolean;
 		username: string;
 		hash: string;
+		gid: string;
 	}
 }
 
@@ -19,12 +20,14 @@ interface MessageProps {
 	message: string;
 	hash: string;
 	game: 'pong' | 'card of doom';
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	data: any;
 }
 export class Message {
 	public username: string;
 	public message: string;
 	public hash: string;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public data: any;
 	public game: 'pong' | 'card of doom';
 	constructor({ username, hash, message, data, game }: MessageProps) {
@@ -59,12 +62,7 @@ export class ClientPlayer {
 	public game: 'pong' | 'card of doom';
 	public playerStatus: 'playing' | 'free';
 	public inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined';
-	constructor(
-		username: string,
-		game: 'pong' | 'card of doom',
-		playerStatus: 'playing' | 'free',
-		inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined'
-	) {
+	constructor(username: string, game: 'pong' | 'card of doom', playerStatus: 'playing' | 'free', inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined') {
 		this.inviteStatus = inviteStatus;
 		this.playerStatus = playerStatus;
 		this.username = username;
@@ -162,6 +160,21 @@ export class ClientPong {
 	}
 }
 
+export function transformFrame(f: ClientPong): ClientPong {
+	return {
+		...f,
+		ballY: f.ballY,
+		ballX: PongWidth - f.ballX,
+		ballRadius: f.ballRadius,
+		paddleHeight: f.paddleHeight,
+		paddleRadius: f.paddleRadius,
+		leftPaddlePosY: f.rightPaddlePosY,
+		rightPaddlePosY: f.leftPaddlePosY,
+		leftPaddlePosX: PongWidth - f.rightPaddlePosX,
+		rightPaddlePosX: PongWidth - f.leftPaddlePosX,
+	};
+}
+
 interface ClientCardOfDoomProps {
 	won: boolean;
 	stop: boolean;
@@ -241,133 +254,131 @@ interface JsonProps {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	target: any;
 }
-class WSS {
-	private static instance: WSS | null;
-	constructor() {
-		if (WSS.instance) return WSS.instance;
-		WSS.instance = this;
-	}
 
-	// ? Comminication Helpers
-	Json({ message, target }: JsonProps) {
-		const json = JSON.parse(message);
-		const properties = Object.getOwnPropertyNames(json);
-		Object.getOwnPropertyNames(target).forEach((property) => {
-			if (_.includes(properties, property) === false) throw new Error('Invalid JSON');
-		});
-		return json;
-	}
+// ? Comminication Helpers
+export function Json({ message, target }: JsonProps) {
+	const json = JSON.parse(message);
+	const properties = Object.getOwnPropertyNames(json);
+	Object.getOwnPropertyNames(target).forEach((property) => {
+		if (_.includes(properties, property) === false) throw new Error('Invalid JSON');
+	});
+	return json;
+}
 
-	// * OTHER : ERROR | NOTAUTHORIZED
-	ErrorMessage(error: string) {
-		return JSON.stringify(new Message({ username: '', hash: '', game: 'pong', message: 'ERROR', data: new WSError(error) }));
-	}
+// * OTHER : ERROR
+export function ErrorMessage(error: string) {
+	return JSON.stringify(new Message({ username: '', hash: '', game: 'pong', message: 'ERROR', data: new WSError(error) }));
+}
 
-	// * POOL : HASH | PLAY | POOL | INVITATIONS
-	HashMessage(username: string, hash: string, game: 'pong' | 'card of doom'): string {
-		return JSON.stringify(new Message({ username, hash, message: 'HASH', game, data: new Hash(username, hash) }));
-	}
-	PlayMessage(username: string, hash: string, game: 'pong' | 'card of doom', gid: string): string {
-		return JSON.stringify(new Message({ username, hash, message: 'PLAY', game, data: new Play(gid) }));
-	}
-	PoolMessage(username: string, hash: string, game: 'pong' | 'card of doom', getClientPlayers: () => ClientPlayer[]): string {
-		return JSON.stringify(new Message({ username, hash, message: 'POOL', game, data: new Pool(getClientPlayers()) }));
-	}
-	InvitationMessage(username: string, hash: string, game: 'pong' | 'card of doom', getInvitions: () => ClientInvitation[]): string {
-		return JSON.stringify(new Message({ username, hash, message: 'INVITATIONS', game, data: new Invitations(getInvitions()) }));
-	}
+// * POOL : HASH | PLAY | POOL | INVITATIONS
+export function HashMessage(username: string, hash: string, game: 'pong' | 'card of doom'): string {
+	return JSON.stringify(new Message({ username, hash, message: 'HASH', game, data: new Hash(username, hash) }));
+}
+export function PlayMessage(username: string, hash: string, game: 'pong' | 'card of doom', gid: string): string {
+	return JSON.stringify(new Message({ username, hash, message: 'PLAY', game, data: new Play(gid) }));
+}
+export function PoolMessage(username: string, hash: string, game: 'pong' | 'card of doom', getClientPlayers: () => ClientPlayer[]): string {
+	return JSON.stringify(new Message({ username, hash, message: 'POOL', game, data: new Pool(getClientPlayers()) }));
+}
+export function InvitationMessage(username: string, hash: string, game: 'pong' | 'card of doom', getInvitions: () => ClientInvitation[]): string {
+	return JSON.stringify(new Message({ username, hash, message: 'INVITATIONS', game, data: new Invitations(getInvitions()) }));
+}
 
-	// * GAME : PONG | CARDOFDOOM
-	PongMessage(username: string, hash: string, game: 'pong' | 'card of doom', clientPong: ClientPong) {
-		return JSON.stringify(new Message({ username, hash, message: 'PONG', game, data: clientPong }));
-	}
-	DoomMessage(username: string, hash: string, game: 'pong' | 'card of doom', clientCardOfDoom: ClientCardOfDoom) {
-		return JSON.stringify(new Message({ username, hash, message: 'DOOM', game, data: clientCardOfDoom }));
-	}
+// * GAME : PONG | CARDOFDOOM
+export function PongMessage(username: string, hash: string, game: 'pong' | 'card of doom', clientPong: ClientPong) {
+	return JSON.stringify(new Message({ username, hash, message: 'PONG', game, data: clientPong }));
+}
+export function DoomMessage(username: string, hash: string, game: 'pong' | 'card of doom', clientCardOfDoom: ClientCardOfDoom) {
+	return JSON.stringify(new Message({ username, hash, message: 'DOOM', game, data: clientCardOfDoom }));
+}
 
-	/************************************************************************************************************************
-	 *                                                        PARSER                                                        *
-	 ************************************************************************************************************************/
-	useParser(json: string, socket: WebSocket) {
-		const { username, message, hash, game, data } = this.Json({ message: json, target: Message.instance });
-		if (message !== 'CONNECT' && hash !== mdb.getPlayerHash(username))
-			throw new Error('hash mismatch ' + hash + ' ' + mdb.getPlayerHash(username));
-		console.log(username, message);
-		switch (message) {
-			case 'CONNECT':
-				const player: Player = mdb.createPlayer(username, socket);
-				mdb.addPlayer(player);
-				player.socket.send(WS.HashMessage(player.username, player.socket.hash, 'pong'));
-				break;
-			case 'ENGAGE': {
-				const engage: Engage = this.Json({ message: data, target: Engage.instance });
-				mdb.connectPlayer(username, engage.gid, game);
-				break;
-			}
-			case 'INVITE': {
-				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				mdb.createInvitation(username, invite.recipient, game);
-				break;
-			}
-			case 'ACCEPT': {
-				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				mdb.acceptInvitation(invite.recipient, username);
-				break;
-			}
-			case 'REJECT': {
-				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				mdb.declineInvitation(invite.recipient, username);
-				break;
-			}
-			case 'DELETE': {
-				const invite: Invite = this.Json({ message: data, target: Invite.instance });
-				if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(username);
-				else mdb.deleteRejectedInvitation(invite.recipient, username);
-				break;
-			}
-			case 'HOOK': {
-				const h: Hook = this.Json({ message: data, target: Hook.instance });
-				mdb.roomHook(username, h);
-				break;
-			}
-			case 'FLIP': {
-				const f: Flip = this.Json({ message: data, target: Flip.instance });
-				mdb.roomFlip(username, f);
-				break;
-			}
-			default:
-				throw new Error('UNKNOWN COMMAND');
+/************************************************************************************************************************
+ *                                                        PARSER                                                        *
+ ************************************************************************************************************************/
+export function useParser(json: string, socket: WebSocket) {
+	const { username, message, hash, game, data } = Json({ message: json, target: Message.instance });
+	if (message !== 'CONNECT' && hash !== mdb.getPlayerHash(username)) throw new Error('hash mismatch');
+	console.log(username, message);
+	switch (message) {
+		case 'CONNECT': {
+			const player: Player = mdb.createPlayer(username, socket);
+			mdb.addPlayer(player);
+			player.socket.send(HashMessage(player.username, player.socket.hash, 'pong'));
+			break;
 		}
-	}
-	closeSocket(socket: WebSocket) {
-		if (socket.username) {
-			mdb.cancelAllPlayerInvitations(socket.username);
-			mdb.removePlayer(socket.username);
+		case 'ENGAGE': {
+			const engage: Engage = Json({ message: data, target: Engage.instance });
+			mdb.connectPlayer(username, engage.gid, game);
+			break;
 		}
-	}
-	main() {
-		setInterval(() => {
-			mdb.deleteExpiredInvitations();
-			mdb.updateRooms();
-			mdb.sendInvitations();
-			mdb.sendPool();
-		}, 1000 / 60);
+		case 'INVITE': {
+			const invite: Invite = Json({ message: data, target: Invite.instance });
+			mdb.createInvitation(username, invite.recipient, game);
+			break;
+		}
+		case 'ACCEPT': {
+			const invite: Invite = Json({ message: data, target: Invite.instance });
+			mdb.acceptInvitation(invite.recipient, username);
+			break;
+		}
+		case 'REJECT': {
+			const invite: Invite = Json({ message: data, target: Invite.instance });
+			mdb.declineInvitation(invite.recipient, username);
+			break;
+		}
+		case 'DELETE': {
+			const invite: Invite = Json({ message: data, target: Invite.instance });
+			if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(username);
+			else mdb.cancelInvitation(invite.recipient, username);
+			break;
+		}
+		case 'HOOK': {
+			const h: Hook = Json({ message: data, target: Hook.instance });
+			mdb.roomHook(username, h);
+			break;
+		}
+		case 'FLIP': {
+			const f: Flip = Json({ message: data, target: Flip.instance });
+			mdb.roomFlip(username, f);
+			break;
+		}
+		default:
+			throw new Error('UNKNOWN COMMAND');
 	}
 }
 
-export const WS = new WSS();
+export function closeSocket(socket: WebSocket) {
+	if (socket.username) {
+		if (socket.PLAYFREE === false) {
+			try {
+				const room: Room = mdb.getRoom(socket.gid);
+				room.roomState = 'disconnected';
+				room.date_at = Date.now();
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			} catch (err: any) {}
+		}
+		mdb.cancelAllPlayerInvitations(socket.username);
+		mdb.removePlayer(socket.username);
+	}
+}
 
-export function transformFrame(f: ClientPong): ClientPong {
-	return {
-		...f,
-		ballY: f.ballY,
-		ballX: PongWidth - f.ballX,
-		ballRadius: f.ballRadius,
-		paddleHeight: f.paddleHeight,
-		paddleRadius: f.paddleRadius,
-		leftPaddlePosY: f.rightPaddlePosY,
-		rightPaddlePosY: f.leftPaddlePosY,
-		leftPaddlePosX: PongWidth - f.rightPaddlePosX,
-		rightPaddlePosX: PongWidth - f.leftPaddlePosX,
-	};
+export function eventEntry(message: string, socket: WebSocket) {
+	try {
+		useParser(message, socket);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	} catch (error: any) {
+		socket.send(ErrorMessage(error.message));
+		console.error('\x1b[31mError processing message:', error.message);
+	}
+}
+
+// * Main Loop
+export function main() {
+	setInterval(() => {
+		mdb.deleteExpiredInvitations();
+		mdb.updateRooms();
+		mdb.sendPool();
+		mdb.sendGame();
+		mdb.sendInvitations();
+	}, 1000 / 60);
 }
