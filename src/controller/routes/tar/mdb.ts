@@ -1,9 +1,23 @@
 import crypto from 'crypto';
 import { WebSocket } from 'ws';
 import { randomUUID } from 'crypto';
-import { Pong } from './pong.js';
-import { ClientCardOfDoom, ClientInvitation, ClientPlayer, ClientPong, DoomMessage, Flip, Hook, InvitationMessage, PlayMessage, PongMessage, PoolMessage, transformFrame } from './ws-server.js';
+
 import { Doom, timeLimite } from './CardOfDoom.js';
+import { Pong } from './pong.js';
+import {
+	Flip,
+	Hook,
+	ClientPong,
+	DoomMessage,
+	PlayMessage,
+	PongMessage,
+	PoolMessage,
+	ClientPlayer,
+	transformFrame,
+	ClientCardOfDoom,
+	ClientInvitation,
+	InvitationMessage,
+} from './ws-server.js';
 
 export const invitationTimeout: number = 10000;
 export const roomFinishTimeout: number = 10000;
@@ -31,6 +45,8 @@ export class Invitation {
 export class Player {
 	public username: string;
 	public socket: WebSocket;
+	public prevPool: string = '';
+	public prevInvitations: string = '';
 	constructor(username: string, socket: WebSocket) {
 		this.username = username;
 		this.socket = socket;
@@ -134,8 +150,10 @@ class Mdb {
 				// TODO:    DATABASE    INTERACTION    HERE
 				// TODO:    DATABASE    INTERACTION    HERE
 			}
-			if (room.roomState === 'connecting' && Date.now() - room.date_at > roomConnectionTimeout) this.removeRoom(room, key, 'connecting');
-			else if (room.roomState === 'disconnected' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(room, key, 'disconnected');
+			if (room.roomState === 'connecting' && Date.now() - room.date_at > roomConnectionTimeout)
+				this.removeRoom(room, key, 'connecting');
+			else if (room.roomState === 'disconnected' && Date.now() - room.date_at > roomFinishTimeout)
+				this.removeRoom(room, key, 'disconnected');
 			else if (room.roomState === 'finished' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(room, key, 'finished');
 		});
 	}
@@ -176,7 +194,9 @@ class Mdb {
 			if (value.username !== username) {
 				try {
 					const i: Invitation = this.getInvitation(username, value.username);
-					pool.push(new ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status));
+					pool.push(
+						new ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status)
+					);
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				} catch (err: any) {
 					pool.push(new ClientPlayer(value.username, 'pong', value.socket.PLAYFREE === true ? 'free' : 'playing', 'unsent'));
@@ -304,14 +324,24 @@ class Mdb {
 	sendInvitations() {
 		this.players.forEach((player) => {
 			if (player.socket.OPEN && player.socket.PLAYFREE === true) {
-				player.socket.send(InvitationMessage(player.username, player.socket.hash, 'pong', () => this.getAllPlayerInvitations(player.username)));
+				const m: string = InvitationMessage(player.username, player.socket.hash, 'pong', () =>
+					this.getAllPlayerInvitations(player.username)
+				);
+				if (m !== player.prevInvitations) {
+					player.prevInvitations = m;
+					player.socket.send(m);
+				}
 			}
 		});
 	}
 	sendPool() {
 		this.players.forEach((player) => {
 			if (player.socket.OPEN && player.socket.PLAYFREE === true) {
-				player.socket.send(PoolMessage(player.username, player.socket.hash, 'pong', () => this.getPool(player.username)));
+				const m: string = PoolMessage(player.username, player.socket.hash, 'pong', () => this.getPool(player.username));
+				if (m !== player.prevPool) {
+					player.socket.send(m);
+					player.prevPool = m;
+				}
 			}
 		});
 	}
