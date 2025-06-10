@@ -1,10 +1,4 @@
-export const PongWidth: number = 1024;
-export const PongHeight: number = 768;
-const friction: number = 0.05;
-
-export function randInt(min: number, max: number): number {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+import { friction, PongWidth, PongHeight,randInt } from './index.js';
 
 // ! Vector ------------------------------------------------------------------------------------------------
 export class Vector {
@@ -128,8 +122,8 @@ export class Paddle {
 // ! Game ------------------------------------------------------------------------------------------------
 export enum BallState {
 	IN = 1,
-	OUT_RIGHT = 2,
 	OUT_LEFT = 3,
+	OUT_RIGHT = 2,
 }
 
 class Keys {

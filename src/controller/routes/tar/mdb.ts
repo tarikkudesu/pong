@@ -1,39 +1,44 @@
-import crypto from 'crypto';
-import { WebSocket } from 'ws';
 import { randomUUID } from 'crypto';
+import { WebSocket } from 'ws';
 
-import { Doom, timeLimite } from './CardOfDoom.js';
-import { Pong } from './pong.js';
+import { uniqueNamesGenerator, Config, adjectives, starWars } from 'unique-names-generator';
+
 import {
 	Flip,
 	Hook,
+	Pong,
+	Doom,
+	GameTYPE,
+	timeLimite,
 	ClientPong,
 	DoomMessage,
 	PlayMessage,
 	PongMessage,
 	PoolMessage,
+	HashMessage,
 	ClientPlayer,
+	generateHash,
+	RoomStateTYPE,
 	transformFrame,
 	ClientCardOfDoom,
 	ClientInvitation,
 	InvitationMessage,
-} from './ws-server.js';
-
-export const invitationTimeout: number = 10000;
-export const roomFinishTimeout: number = 10000;
-export const roomConnectionTimeout: number = 10000;
-
-export function generateHash(text: string): string {
-	return crypto.createHash('sha256').update(text).digest('hex');
-}
+	invitationTimeout,
+	roomFinishTimeout,
+	InvitationStateTYPE,
+	roomConnectionTimeout,
+	TournamentPlayerTYPE,
+	TournamentMatchTYPE,
+	TournamentStateTYPE,
+} from './index.js';
 
 export class Invitation {
+	public game: GameTYPE;
 	public sender: string;
 	public recipient: string;
 	public created_at: number;
-	public game: 'pong' | 'card of doom';
-	public invite_status: 'unsent' | 'pending' | 'accepted' | 'declined';
-	constructor(sender: string, recipient: string, game: 'pong' | 'card of doom') {
+	public invite_status: InvitationStateTYPE;
+	constructor(sender: string, recipient: string, game: GameTYPE) {
 		this.invite_status = 'pending';
 		this.created_at = Date.now();
 		this.recipient = recipient;
@@ -56,13 +61,63 @@ export class Player {
 export class Room {
 	public player: string;
 	public opponent: string;
-	public playerNoBan: number = 1;
 	public date_at: number = Date.now();
 	public game: Pong | Doom | null = null;
-	public roomState: 'connecting' | 'player-1-connected' | 'player-2-connected' | 'playing' | 'disconnected' | 'finished' = 'connecting';
+	public roomState: RoomStateTYPE = 'connecting';
 	constructor(pu: string, ou: string) {
 		this.opponent = ou;
 		this.player = pu;
+	}
+}
+
+export class Tournament {
+	private _name: string = '';
+	private _due_date: number = 0;
+	private _maxPlayers: number = 5;
+	private _currentLevel: number = 0;
+	private _state: TournamentStateTYPE = 'not open';
+	public matches: Set<TournamentMatchTYPE> = new Set();
+	public registeredPlayers: Set<TournamentPlayerTYPE> = new Set();
+	constructor() {}
+	newTournament() {
+		const customConfig: Config = {
+			dictionaries: [adjectives, starWars],
+			separator: '-',
+			length: 2,
+		};
+		const date: Date = new Date();
+		this.registeredPlayers.clear();
+		this._name = uniqueNamesGenerator(customConfig);
+		this._due_date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours() + 1).getTime();
+		this._state = 'not open';
+	}
+	register(player: string) {
+		if (Date.now() < this._due_date) throw new Error('Registration is not open yet my friend');
+		if (this.registeredPlayers.size >= this._maxPlayers) throw new Error('Tournament is Full');
+		this.registeredPlayers.add({ username: player, level: 0 });
+		if (this.registeredPlayers.size === this._maxPlayers) this._state = 'playing';
+	}
+	levelup(player: string) {
+		for (const p of this.registeredPlayers) if (p.username === player) p.level += 1;
+		// TODO: TEST IF THE OBJECT IS MUTATED IN THE SET
+	}
+	update() {
+		switch (this._state) {
+			case 'not open': {
+				if (Date.now() >= this._due_date) this._state = 'open';
+				break;
+			}
+			case 'open': {
+				break;
+			}
+			case 'playing': {
+				break;
+			}
+			case 'finished': {
+				this.newTournament();
+				break;
+			}
+		}
 	}
 }
 
@@ -84,13 +139,21 @@ class Mdb {
 	}
 
 	/***************************************************************************************************************
+	 *                                        TOURNAMENT TABLE MANIPULATION                                        *
+	 ***************************************************************************************************************/
+
+	/***************************************************************************************************************
 	 *                                           ROOM TABLE MANIPULATION                                           *
 	 ***************************************************************************************************************/
 
 	// * new room
-	addRoom(pu: string, ou: string, gid: string): void {
-		this.rooms.set(gid, new Room(pu, ou));
-		console.log('ROOM CREATED');
+	addRoom(player: string, opponent: string, game: GameTYPE): void {
+		const sen: Player = this.getPlayer(player);
+		const rec: Player = this.getPlayer(opponent);
+		const GID: string = randomUUID();
+		sen.socket.send(PlayMessage(sen.username, sen.socket.hash, game, GID));
+		rec.socket.send(PlayMessage(rec.username, rec.socket.hash, game, GID));
+		this.rooms.set(GID, new Room(player, opponent));
 	}
 
 	// * remove room
@@ -101,13 +164,12 @@ class Mdb {
 	}
 
 	// * remove room
-	removeRoom(room: Room, key: string, r: string) {
+	removeRoom(key: string) {
 		this.rooms.delete(key);
-		console.log('ROOM REMOVED ', r);
 	}
 
 	// * connnect player to a room
-	connectPlayer(username: string, gid: string, game: 'pong' | 'card of doom') {
+	connectPlayer(username: string, gid: string, game: GameTYPE) {
 		const room: Room = this.getRoom(gid);
 		const player: Player = this.getPlayer(username);
 		if (username !== room.player && username !== room.opponent) throw new Error('You are not allowed to be here');
@@ -150,11 +212,9 @@ class Mdb {
 				// TODO:    DATABASE    INTERACTION    HERE
 				// TODO:    DATABASE    INTERACTION    HERE
 			}
-			if (room.roomState === 'connecting' && Date.now() - room.date_at > roomConnectionTimeout)
-				this.removeRoom(room, key, 'connecting');
-			else if (room.roomState === 'disconnected' && Date.now() - room.date_at > roomFinishTimeout)
-				this.removeRoom(room, key, 'disconnected');
-			else if (room.roomState === 'finished' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(room, key, 'finished');
+			if (room.roomState === 'connecting' && Date.now() - room.date_at > roomConnectionTimeout) this.removeRoom(key);
+			else if (room.roomState === 'disconnected' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(key);
+			else if (room.roomState === 'finished' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(key);
 		});
 	}
 
@@ -164,8 +224,9 @@ class Mdb {
 
 	// * add player
 	addPlayer(player: Player): void {
-		if (this.checkIfPlayerExists(player.username)) throw new Error('Player already exists');
+		if (this.players.has(player.username)) throw new Error('Player already exists');
 		this.players.set(player.username, player);
+		player.socket.send(HashMessage(player.username, player.socket.hash, 'pong'));
 	}
 	// * remove player
 	removePlayer(username: string) {
@@ -183,21 +244,14 @@ class Mdb {
 		if (!player) throw new Error("Player-object doesn't exists");
 		return player;
 	}
-	// * check if Player exists
-	checkIfPlayerExists(username: string): boolean {
-		if (this.players.get(username)) return true;
-		return false;
-	}
 	getPool(username: string): ClientPlayer[] {
 		const pool: ClientPlayer[] = [];
 		this.players.forEach((value) => {
 			if (value.username !== username) {
 				try {
 					const i: Invitation = this.getInvitation(username, value.username);
-					pool.push(
-						new ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status)
-					);
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					pool.push(new ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status));
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
 				} catch (err: any) {
 					pool.push(new ClientPlayer(value.username, 'pong', value.socket.PLAYFREE === true ? 'free' : 'playing', 'unsent'));
 				}
@@ -217,26 +271,21 @@ class Mdb {
 		return invite;
 	}
 	// * create invitation
-	createInvitation(sender: string, recipient: string, game: 'pong' | 'card of doom'): void {
+	createInvitation(sender: string, recipient: string, game: GameTYPE): void {
 		if (sender === recipient) throw new Error('invited yourself, pretty smart huh!!');
 		const sen: Player = this.getPlayer(sender);
 		const rec: Player = this.getPlayer(recipient);
 		if (rec.socket.PLAYFREE === false) throw new Error(rec.username + ' is currently playing');
-		if (this.invitations.get(sen.username + rec.username)) return;
+		if (this.invitations.has(sen.username + rec.username)) return;
 		this.invitations.set(sen.username + rec.username, new Invitation(sen.username, rec.username, game));
 	}
 	// * update accepted invitation
 	acceptInvitation(sender: string, recipient: string): void {
 		const invite: Invitation = this.getInvitation(sender, recipient);
-		const sen: Player = this.getPlayer(sender);
-		const rec: Player = this.getPlayer(recipient);
 		if (invite.invite_status === 'pending') {
-			const GID: string = randomUUID();
 			invite.invite_status = 'accepted';
-			this.addRoom(sen.username, rec.username, GID);
-			sen.socket.send(PlayMessage(sen.username, sen.socket.hash, invite.game, GID));
-			rec.socket.send(PlayMessage(rec.username, rec.socket.hash, invite.game, GID));
 			this.cancelInvitation(sender, recipient);
+			this.addRoom(sender, recipient, invite.game);
 		}
 	}
 	// * update declined invitation
@@ -310,11 +359,11 @@ class Mdb {
 							lost: winner !== '' && winner !== player.username,
 							start: roomState !== 'connecting' && roomState !== 'player-1-connected' && roomState !== 'player-2-connected',
 						});
-						player.socket.send(DoomMessage(player.username, player.socket.hash, 'card of doom', clientDoom));
+						player.socket.send(DoomMessage(player.username, player.socket.hash, 'doom', clientDoom));
 						if (clientDoom.won || clientDoom.lost || clientDoom.stop) this.disconnectPlayer(player);
 					}
 				}
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
 			} catch (err: any) {
 				player.socket.PLAYFREE = true;
 				player.socket.gid = '';
@@ -324,9 +373,7 @@ class Mdb {
 	sendInvitations() {
 		this.players.forEach((player) => {
 			if (player.socket.OPEN && player.socket.PLAYFREE === true) {
-				const m: string = InvitationMessage(player.username, player.socket.hash, 'pong', () =>
-					this.getAllPlayerInvitations(player.username)
-				);
+				const m: string = InvitationMessage(player.username, player.socket.hash, 'pong', () => this.getAllPlayerInvitations(player.username));
 				if (m !== player.prevInvitations) {
 					player.prevInvitations = m;
 					player.socket.send(m);

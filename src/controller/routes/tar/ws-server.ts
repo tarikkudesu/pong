@@ -1,17 +1,7 @@
-import { Ball, Paddle, PongWidth } from './pong.js';
-import { mdb, Player, Room } from './mdb.js';
+import { GameTYPE, PlayerStateTYPE, InvitationStateTYPE, mdb, Player, Room, Ball, Paddle, PongWidth } from './index.js';
 import { WebSocket } from 'ws';
 
 import _ from 'lodash';
-
-declare module 'ws' {
-	interface WebSocket {
-		PLAYFREE: boolean;
-		username: string;
-		hash: string;
-		gid: string;
-	}
-}
 
 // ! shared ------------------------------------------------------------------------------------------
 
@@ -19,7 +9,7 @@ interface MessageProps {
 	username: string;
 	message: string;
 	hash: string;
-	game: 'pong' | 'card of doom';
+	game: GameTYPE;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	data: any;
 }
@@ -29,7 +19,7 @@ export class Message {
 	public hash: string;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public data: any;
-	public game: 'pong' | 'card of doom';
+	public game: GameTYPE;
 	constructor({ username, hash, message, data, game }: MessageProps) {
 		this.data = JSON.stringify(data);
 		this.username = username;
@@ -59,10 +49,10 @@ export class Hash {
 
 export class ClientPlayer {
 	public username: string;
-	public game: 'pong' | 'card of doom';
-	public playerStatus: 'playing' | 'free';
-	public inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined';
-	constructor(username: string, game: 'pong' | 'card of doom', playerStatus: 'playing' | 'free', inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined') {
+	public game: GameTYPE;
+	public playerStatus: PlayerStateTYPE;
+	public inviteStatus: InvitationStateTYPE;
+	constructor(username: string, game: GameTYPE, playerStatus: PlayerStateTYPE, inviteStatus: InvitationStateTYPE) {
 		this.inviteStatus = inviteStatus;
 		this.playerStatus = playerStatus;
 		this.username = username;
@@ -73,9 +63,9 @@ export class ClientPlayer {
 
 export class ClientInvitation {
 	public sender: string;
-	public game: 'pong' | 'card of doom';
-	public inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined';
-	constructor(sender: string, game: 'pong' | 'card of doom', inviteStatus: 'unsent' | 'pending' | 'accepted' | 'declined') {
+	public game: GameTYPE;
+	public inviteStatus: InvitationStateTYPE;
+	constructor(sender: string, game: GameTYPE, inviteStatus: InvitationStateTYPE) {
 		this.inviteStatus = inviteStatus;
 		this.sender = sender;
 		this.game = game;
@@ -271,24 +261,24 @@ export function ErrorMessage(error: string) {
 }
 
 // * POOL : HASH | PLAY | POOL | INVITATIONS
-export function HashMessage(username: string, hash: string, game: 'pong' | 'card of doom'): string {
+export function HashMessage(username: string, hash: string, game: GameTYPE): string {
 	return JSON.stringify(new Message({ username, hash, message: 'HASH', game, data: new Hash(username, hash) }));
 }
-export function PlayMessage(username: string, hash: string, game: 'pong' | 'card of doom', gid: string): string {
+export function PlayMessage(username: string, hash: string, game: GameTYPE, gid: string): string {
 	return JSON.stringify(new Message({ username, hash, message: 'PLAY', game, data: new Play(gid) }));
 }
-export function PoolMessage(username: string, hash: string, game: 'pong' | 'card of doom', getClientPlayers: () => ClientPlayer[]): string {
+export function PoolMessage(username: string, hash: string, game: GameTYPE, getClientPlayers: () => ClientPlayer[]): string {
 	return JSON.stringify(new Message({ username, hash, message: 'POOL', game, data: new Pool(getClientPlayers()) }));
 }
-export function InvitationMessage(username: string, hash: string, game: 'pong' | 'card of doom', getInvitions: () => ClientInvitation[]): string {
+export function InvitationMessage(username: string, hash: string, game: GameTYPE, getInvitions: () => ClientInvitation[]): string {
 	return JSON.stringify(new Message({ username, hash, message: 'INVITATIONS', game, data: new Invitations(getInvitions()) }));
 }
 
 // * GAME : PONG | CARDOFDOOM
-export function PongMessage(username: string, hash: string, game: 'pong' | 'card of doom', clientPong: ClientPong) {
+export function PongMessage(username: string, hash: string, game: GameTYPE, clientPong: ClientPong) {
 	return JSON.stringify(new Message({ username, hash, message: 'PONG', game, data: clientPong }));
 }
-export function DoomMessage(username: string, hash: string, game: 'pong' | 'card of doom', clientCardOfDoom: ClientCardOfDoom) {
+export function DoomMessage(username: string, hash: string, game: GameTYPE, clientCardOfDoom: ClientCardOfDoom) {
 	return JSON.stringify(new Message({ username, hash, message: 'DOOM', game, data: clientCardOfDoom }));
 }
 
@@ -303,43 +293,50 @@ export function useParser(json: string, socket: WebSocket) {
 		case 'CONNECT': {
 			const player: Player = mdb.createPlayer(username, socket);
 			mdb.addPlayer(player);
-			player.socket.send(HashMessage(player.username, player.socket.hash, 'pong'));
+			// TODO: Refactor Later
 			break;
 		}
 		case 'ENGAGE': {
 			const engage: Engage = Json({ message: data, target: Engage.instance });
 			mdb.connectPlayer(username, engage.gid, game);
+			// TODO: Refactor Later
 			break;
 		}
 		case 'INVITE': {
 			const invite: Invite = Json({ message: data, target: Invite.instance });
 			mdb.createInvitation(username, invite.recipient, game);
+			// TODO: Refactor Later
 			break;
 		}
 		case 'ACCEPT': {
 			const invite: Invite = Json({ message: data, target: Invite.instance });
 			mdb.acceptInvitation(invite.recipient, username);
+			// TODO: Refactor Later
 			break;
 		}
 		case 'REJECT': {
 			const invite: Invite = Json({ message: data, target: Invite.instance });
 			mdb.declineInvitation(invite.recipient, username);
+			// TODO: Refactor Later
 			break;
 		}
 		case 'DELETE': {
 			const invite: Invite = Json({ message: data, target: Invite.instance });
 			if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(username);
+			// TODO: Refactor Later
 			else mdb.cancelInvitation(invite.recipient, username);
 			break;
 		}
 		case 'HOOK': {
 			const h: Hook = Json({ message: data, target: Hook.instance });
 			mdb.roomHook(username, h);
+			// TODO: Refactor Later
 			break;
 		}
 		case 'FLIP': {
 			const f: Flip = Json({ message: data, target: Flip.instance });
 			mdb.roomFlip(username, f);
+			// TODO: Refactor Later
 			break;
 		}
 		default:
@@ -354,8 +351,10 @@ export function closeSocket(socket: WebSocket) {
 				const room: Room = mdb.getRoom(socket.gid);
 				room.roomState = 'disconnected';
 				room.date_at = Date.now();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			} catch (err: any) {}
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+			} catch (err: any) {
+				/* empty */
+			}
 		}
 		mdb.cancelAllPlayerInvitations(socket.username);
 		mdb.removePlayer(socket.username);
