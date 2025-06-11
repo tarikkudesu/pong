@@ -11,10 +11,14 @@ export type TournamentPlayerTYPE = {
 };
 
 export type TournamentMatchTYPE = {
-	level: number;
 	player: string;
 	opponent: string;
+	finished: boolean;
+	// ! The attribute must never be on the client side, only in the server
+	GID: string;
 };
+
+export type ClientTournamentMatchTYPE = Omit<TournamentMatchTYPE, 'GID'>;
 
 declare module 'ws' {
 	interface WebSocket {

@@ -1,4 +1,4 @@
-import { eventEntry, closeSocket, main } from './tar/dist/ws-server.js';
+import { eventEntry, closeSocket, main } from './tar/dist/index.js';
 
 export default async (fastify) => {
 	main();

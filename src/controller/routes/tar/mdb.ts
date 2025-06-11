@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { WebSocket } from 'ws';
 
 import { uniqueNamesGenerator, Config, adjectives, starWars } from 'unique-names-generator';
+import { format } from 'date-fns';
 
 import {
 	Flip,
@@ -30,7 +31,11 @@ import {
 	TournamentPlayerTYPE,
 	TournamentMatchTYPE,
 	TournamentStateTYPE,
+	TournamentMessage,
+	ClientTournament,
+	ClientTournamentMatchTYPE,
 } from './index.js';
+import _ from 'lodash';
 
 export class Invitation {
 	public game: GameTYPE;
@@ -51,6 +56,7 @@ export class Player {
 	public username: string;
 	public socket: WebSocket;
 	public prevPool: string = '';
+	public prevTournament: string = '';
 	public prevInvitations: string = '';
 	constructor(username: string, socket: WebSocket) {
 		this.username = username;
@@ -71,14 +77,16 @@ export class Room {
 }
 
 export class Tournament {
-	private _name: string = '';
-	private _due_date: number = 0;
-	private _maxPlayers: number = 5;
-	private _currentLevel: number = 0;
-	private _state: TournamentStateTYPE = 'not open';
+	public name: string = '';
+	public due_date: number = 0;
+	public maxPlayers: number = 5;
+	public currentLevel: number = 0;
+	public state: TournamentStateTYPE = 'finished';
 	public matches: Set<TournamentMatchTYPE> = new Set();
 	public registeredPlayers: Set<TournamentPlayerTYPE> = new Set();
-	constructor() {}
+	constructor() {
+		this.newTournament();
+	}
 	newTournament() {
 		const customConfig: Config = {
 			dictionaries: [adjectives, starWars],
@@ -86,38 +94,33 @@ export class Tournament {
 			length: 2,
 		};
 		const date: Date = new Date();
+		this.matches.clear();
+		this.currentLevel = 0;
+		this.state = 'not open';
 		this.registeredPlayers.clear();
-		this._name = uniqueNamesGenerator(customConfig);
-		this._due_date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours() + 1).getTime();
-		this._state = 'not open';
+		this.name = uniqueNamesGenerator(customConfig);
+		this.due_date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes() + 1).getTime();
 	}
 	register(player: string) {
-		if (Date.now() < this._due_date) throw new Error('Registration is not open yet my friend');
-		if (this.registeredPlayers.size >= this._maxPlayers) throw new Error('Tournament is Full');
-		this.registeredPlayers.add({ username: player, level: 0 });
-		if (this.registeredPlayers.size === this._maxPlayers) this._state = 'playing';
+		if (Date.now() < this.due_date) throw new Error('Registration is not open yet my friend');
+		if (this.registeredPlayers.size >= this.maxPlayers) throw new Error('Tournament is Full');
+		if (![...this.registeredPlayers].some((e) => e.username === player)) this.registeredPlayers.add({ username: player, level: 0 });
+		if (this.registeredPlayers.size === this.maxPlayers) this.state = 'playing';
 	}
 	levelup(player: string) {
 		for (const p of this.registeredPlayers) if (p.username === player) p.level += 1;
-		// TODO: TEST IF THE OBJECT IS MUTATED IN THE SET
 	}
-	update() {
-		switch (this._state) {
-			case 'not open': {
-				if (Date.now() >= this._due_date) this._state = 'open';
-				break;
+	registerRoomResult(room: Room, key: string) {
+		this.matches.forEach((match) => {
+			if (match.GID === key) {
+				if (room.game) {
+					if (room.game.winner === match.player) this.levelup(match.player);
+					else this.levelup(match.opponent);
+				}
+				this.matches.delete(match);
+				return;
 			}
-			case 'open': {
-				break;
-			}
-			case 'playing': {
-				break;
-			}
-			case 'finished': {
-				this.newTournament();
-				break;
-			}
-		}
+		});
 	}
 }
 
@@ -125,6 +128,7 @@ class Mdb {
 	private invitations: Map<string, Invitation> = new Map();
 	private players: Map<string, Player> = new Map();
 	private rooms: Map<string, Room> = new Map();
+	private tournament = new Tournament();
 	constructor() {}
 
 	// * create player
@@ -142,15 +146,65 @@ class Mdb {
 	 *                                        TOURNAMENT TABLE MANIPULATION                                        *
 	 ***************************************************************************************************************/
 
+	updateTournament() {
+		switch (this.tournament.state) {
+			case 'not open': {
+				if (Date.now() >= this.tournament.due_date) this.tournament.state = 'open';
+				break;
+			}
+			case 'open': {
+				break;
+			}
+			case 'playing': {
+				[...this.tournament.matches].forEach((ele) => {
+					if (ele.finished) this.tournament.matches.delete(ele);
+				});
+				if (this.tournament.matches.size === 0) {
+					// TODO: Next Matches
+					const winners: TournamentPlayerTYPE[] = [...this.tournament.registeredPlayers].filter((e) => e.level === this.tournament.currentLevel).sort();
+					if (winners.length === 1 || winners.length === 0) this.tournament.state = 'finished';
+					else {
+						this.tournament.matches.clear();
+						for (let i = 0; i < winners.length; i++) {
+							if (i + 1 < winners.length) {
+								this.createTournamentMatch(winners[i].username, winners[i + 1].username);
+								i++;
+							} else {
+								this.tournament.levelup(winners[i].username);
+							}
+						}
+						this.tournament.currentLevel += 1;
+					}
+				}
+				break;
+			}
+			case 'finished': {
+				this.tournament.newTournament();
+				break;
+			}
+		}
+	}
+
+	createTournamentMatch(player: string, opponent: string) {
+		const GID: string = randomUUID();
+		this.tournament.matches.add({ player, opponent, finished: false, GID });
+		this.rooms.set(GID, new Room(player, opponent));
+		// this.addRoom(player, opponent, 'pong', GID);
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	register(username: string, name: string) {
+		this.tournament.register(username);
+	}
+
 	/***************************************************************************************************************
 	 *                                           ROOM TABLE MANIPULATION                                           *
 	 ***************************************************************************************************************/
 
 	// * new room
-	addRoom(player: string, opponent: string, game: GameTYPE): void {
+	addRoom(player: string, opponent: string, game: GameTYPE, GID: string): void {
 		const sen: Player = this.getPlayer(player);
 		const rec: Player = this.getPlayer(opponent);
-		const GID: string = randomUUID();
 		sen.socket.send(PlayMessage(sen.username, sen.socket.hash, game, GID));
 		rec.socket.send(PlayMessage(rec.username, rec.socket.hash, game, GID));
 		this.rooms.set(GID, new Room(player, opponent));
@@ -164,7 +218,8 @@ class Mdb {
 	}
 
 	// * remove room
-	removeRoom(key: string) {
+	removeRoom(room: Room, key: string) {
+		this.tournament.registerRoomResult(room, key);
 		this.rooms.delete(key);
 	}
 
@@ -207,14 +262,15 @@ class Mdb {
 			if (room.game && room.game.update()) {
 				room.roomState = 'finished';
 				room.date_at = Date.now();
+				this.tournament.registerRoomResult(room, key);
 				// TODO:    DATABASE    INTERACTION    HERE
 				// TODO:    DATABASE    INTERACTION    HERE
 				// TODO:    DATABASE    INTERACTION    HERE
 				// TODO:    DATABASE    INTERACTION    HERE
 			}
-			if (room.roomState === 'connecting' && Date.now() - room.date_at > roomConnectionTimeout) this.removeRoom(key);
-			else if (room.roomState === 'disconnected' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(key);
-			else if (room.roomState === 'finished' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(key);
+			if (room.roomState === 'connecting' && Date.now() - room.date_at > roomConnectionTimeout) this.removeRoom(room, key);
+			else if (room.roomState === 'disconnected' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(room, key);
+			else if (room.roomState === 'finished' && Date.now() - room.date_at > roomFinishTimeout) this.removeRoom(room, key);
 		});
 	}
 
@@ -285,7 +341,7 @@ class Mdb {
 		if (invite.invite_status === 'pending') {
 			invite.invite_status = 'accepted';
 			this.cancelInvitation(sender, recipient);
-			this.addRoom(sender, recipient, invite.game);
+			this.addRoom(sender, recipient, invite.game, randomUUID());
 		}
 	}
 	// * update declined invitation
@@ -367,6 +423,39 @@ class Mdb {
 			} catch (err: any) {
 				player.socket.PLAYFREE = true;
 				player.socket.gid = '';
+			}
+		});
+	}
+	sendTournament() {
+		this.players.forEach((player) => {
+			if (player.socket.OPEN && player.socket.PLAYFREE === true) {
+				const { name, due_date, registeredPlayers, maxPlayers, matches, state, currentLevel } = this.tournament;
+				const clientMatches: Set<ClientTournamentMatchTYPE> = new Set();
+				let gid: string = '';
+				matches.forEach((e: TournamentMatchTYPE) => {
+					if (e.player === player.username || e.opponent === player.username) gid = e.GID;
+					clientMatches.add({ player: e.player, opponent: e.opponent, finished: e.finished });
+				});
+				const m: string = TournamentMessage(
+					player.username,
+					player.socket.hash,
+					'pong',
+					new ClientTournament({
+						gid,
+						name,
+						state,
+						round: currentLevel,
+						results: [...registeredPlayers],
+						nextMatches: [...clientMatches],
+						date: format(due_date, 'yyyy-MM-dd HH:mm'),
+						emptySlots: maxPlayers - registeredPlayers.size,
+						registered: [...registeredPlayers].some((e) => e.username === player.username),
+					})
+				);
+				if (m !== player.prevTournament) {
+					player.prevTournament = m;
+					player.socket.send(m);
+				}
 			}
 		});
 	}

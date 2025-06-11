@@ -1,4 +1,4 @@
-import { GameTYPE, PlayerStateTYPE, InvitationStateTYPE, mdb, Player, Room, Ball, Paddle, PongWidth } from './index.js';
+import { GameTYPE, PlayerStateTYPE, InvitationStateTYPE, mdb, Player, Room, Ball, Paddle, PongWidth, TournamentStateTYPE, TournamentPlayerTYPE, ClientTournamentMatchTYPE } from './index.js';
 import { WebSocket } from 'ws';
 
 import _ from 'lodash';
@@ -71,6 +71,41 @@ export class ClientInvitation {
 		this.game = game;
 	}
 	static instance = new ClientInvitation('', 'pong', 'unsent');
+}
+
+interface ClientTournamentProps {
+	gid: string;
+	name: string;
+	date: string;
+	round: number;
+	emptySlots: number;
+	registered: boolean;
+	state: TournamentStateTYPE;
+	results: TournamentPlayerTYPE[];
+	nextMatches: ClientTournamentMatchTYPE[];
+}
+export class ClientTournament {
+	public gid: string;
+	public date: string;
+	public name: string;
+	public round: number;
+	public emptySlots: number;
+	public registered: boolean;
+	public state: TournamentStateTYPE;
+	public results: TournamentPlayerTYPE[];
+	public nextMatches: ClientTournamentMatchTYPE[];
+	constructor({ name, date, emptySlots, state, results, registered, nextMatches, round, gid }: ClientTournamentProps) {
+		this.nextMatches = nextMatches;
+		this.registered = registered;
+		this.emptySlots = emptySlots;
+		this.results = results;
+		this.state = state;
+		this.round = round;
+		this.date = date;
+		this.name = name;
+		this.gid = gid;
+	}
+	static instance = new ClientTournament({ name: '', date: '', emptySlots: 0, registered: false, state: 'not open', results: [], nextMatches: [], round: 0, gid: '' });
 }
 
 // ! res ------------------------------------------------------------------------------------------
@@ -198,6 +233,13 @@ export class ClientCardOfDoom {
 
 // * Pool
 
+export class Register {
+	name: string;
+	constructor(name: string) {
+		this.name = name;
+	}
+	public static instance = new Register('');
+}
 export class Engage {
 	gid: string;
 	constructor(gid: string) {
@@ -273,7 +315,9 @@ export function PoolMessage(username: string, hash: string, game: GameTYPE, getC
 export function InvitationMessage(username: string, hash: string, game: GameTYPE, getInvitions: () => ClientInvitation[]): string {
 	return JSON.stringify(new Message({ username, hash, message: 'INVITATIONS', game, data: new Invitations(getInvitions()) }));
 }
-
+export function TournamentMessage(username: string, hash: string, game: GameTYPE, clientTournament: ClientTournament): string {
+	return JSON.stringify(new Message({ username, hash, message: 'TOURNAMENT', game, data: clientTournament }));
+}
 // * GAME : PONG | CARDOFDOOM
 export function PongMessage(username: string, hash: string, game: GameTYPE, clientPong: ClientPong) {
 	return JSON.stringify(new Message({ username, hash, message: 'PONG', game, data: clientPong }));
@@ -293,6 +337,12 @@ export function useParser(json: string, socket: WebSocket) {
 		case 'CONNECT': {
 			const player: Player = mdb.createPlayer(username, socket);
 			mdb.addPlayer(player);
+			// TODO: Refactor Later
+			break;
+		}
+		case 'REGISTER': {
+			const register: Register = Json({ message: data, target: Register.instance });
+			mdb.register(username, register.name);
 			// TODO: Refactor Later
 			break;
 		}
@@ -375,9 +425,11 @@ export function eventEntry(message: string, socket: WebSocket) {
 export function main() {
 	setInterval(() => {
 		mdb.deleteExpiredInvitations();
+		mdb.updateTournament();
 		mdb.updateRooms();
 		mdb.sendPool();
 		mdb.sendGame();
 		mdb.sendInvitations();
+		mdb.sendTournament();
 	}, 1000 / 60);
 }
