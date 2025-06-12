@@ -11,7 +11,7 @@ build :
 	docker $@ -t $(CONTAINER_NAME):$(CONTAINER_TAG) .
 
 run :
-	@docker $@ --init -it --name pong --rm -v ./:/app -p 3000:3000 $(CONTAINER_NAME):$(CONTAINER_TAG)
+	@docker run --init -it --name pong --rm -v ./app:/app -p 3000:3000 $(CONTAINER_NAME):$(CONTAINER_TAG)
 
 exec :
 	@docker $@ -it $(CONTAINER_NAME) zsh
