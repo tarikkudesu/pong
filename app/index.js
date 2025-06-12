@@ -7,7 +7,7 @@ function main() {
         }
     }
 
-    new Server(true).start()
+    new Server(logger).start()
     // new Server().start()
 }
 

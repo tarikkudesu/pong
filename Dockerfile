@@ -5,8 +5,4 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 
 WORKDIR /app
 
-COPY ./app .
-# CMD ["bash"]
-CMD ["npm", "i"]
-
-ENTRYPOINT ["npm", "run", "dev"]
+ENTRYPOINT ["bash"]

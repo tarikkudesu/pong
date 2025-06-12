@@ -4,20 +4,21 @@ VOLUMES			=	$$(docker volume ls -q)
 CONTAINERS		=	$$(docker ps -aq)
 CONTAINER_NAME	=	pong
 CONTAINER_TAG	=	oo
+PWD				=	C:\Users\otman\Desktop\study\pong
 
-all: build run
+all: build run exec
 
 build :
 	docker $@ -t $(CONTAINER_NAME):$(CONTAINER_TAG) .
 
 run :
-	@docker run --init -it --name pong --rm -v ./app:/app -p 3000:3000 $(CONTAINER_NAME):$(CONTAINER_TAG)
+	@docker run --init -it --name pong --rm -v $(PWD)/app:/app -p 3000:3000 -d $(CONTAINER_NAME):$(CONTAINER_TAG)
 
 exec :
 	@docker $@ -it $(CONTAINER_NAME) zsh
 
 stop :
-	@docker $@ $(CONTAINERS) > /dev/null 2>&1 || true
+	@docker $@ $(CONTAINER_NAME)
 
 top:
 	@docker $@ $(CONTAINER_NAME)
@@ -25,17 +26,17 @@ top:
 stats:
 	@docker $@ $(CONTAINER_NAME)
 
-rmcontainers: stop
-	@docker rm $(CONTAINERS) > /dev/null 2>&1 || true
+rmc: stop
+	@docker rm $(CONTAINER_NAME)
 
-rmimages:
-	@docker image rm $(IMAGES) > /dev/null 2>&1 || true
+rmi:
+	@docker image rm $(IMAGES)
 
 rmnetworks:
-	@docker network rm $(NETWORKS)  > /dev/null 2>&1 || true 
+	@docker network rm $(NETWORKS)  
 
-rmvolumes:
-	@docker volume rm $(VOLUMES)  > /dev/null 2>&1 || true
+rmv:
+	@docker volume rm $(VOLUMES) 
 
 prune:
 	docker system prune -a -f
