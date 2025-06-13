@@ -5,4 +5,6 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 
 WORKDIR /app
 
-ENTRYPOINT ["bash"]
+RUN npm install
+
+ENTRYPOINT ["npm", "run", "dev"]

@@ -1,0 +1,45 @@
+services:
+
+  nginx:
+    build: ./nginx
+    image: nginx:oo
+    container_name: nginx
+    ports:
+      - "80:80"
+    networks:
+      - trance
+    init: true
+
+  pong:
+    build: ./app
+    image: pong:oo
+    container_name: pong
+    ports:
+      - "3000:3000"
+    volumes:
+      - pong:/app
+    networks:
+      - trance
+    init: true
+
+  redis:
+    build: ./redis
+    image: redis:oo
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - trance
+    init: true
+
+volumes:
+  pong:
+    name: pong
+    driver: local
+    driver_opts:
+      o: bind
+      device: ./app
+      type: none
+
+networks:
+  trance:

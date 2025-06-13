@@ -1,4 +1,4 @@
 pong.subject.pdf
-node_modules
+**/node_modules
 modules.md
 .env

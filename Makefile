@@ -18,7 +18,7 @@ exec :
 	@docker $@ -it $(CONTAINER_NAME) zsh
 
 stop :
-	@docker $@ $(CONTAINER_NAME)
+	@docker $@ $(CONTAINERS)
 
 top:
 	@docker $@ $(CONTAINER_NAME)
