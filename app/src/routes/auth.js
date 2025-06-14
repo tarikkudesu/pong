@@ -1,7 +1,10 @@
 import * as schemas from '../schemas/auth.js'
 import * as authController from '../controllers/auth-controller.js'
 
-export default (fastify) => {
+export default (fastify) =>
+{
+
+    fastify.post('/refresh', authController.refreshToken);
 
     fastify.post('/signin', { schema: schemas.signinSchema }, authController.signin);
 

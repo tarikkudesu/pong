@@ -13,9 +13,9 @@ POST http://localhost:3000/api/auth/signup HTTP/1.1
 Content-Type: application/json
 
 {
-    "username": "otman",
-    "email": "otman@gmail.com",
-    "pass": "otman"
+    "username": "aymane",
+    "email": "aymane@gmail.com",
+    "pass": "aymane"
 }
 
 ###
@@ -44,4 +44,13 @@ Content-Type: application/json
 {
     "email": "ooulcaid.1337@gmail.com",
     "otp": "091827"
+}
+
+###
+
+POST http://localhost:3000/api/auth/refresh HTTP/1.1
+Content-Type: application/json
+
+{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im90bWFuIiwicGFzcyI6Im90bWFuIiwiaWF0IjoxNzQ5ODk1MTg3LCJleHAiOjE3NTUwNzkxODd9.GNtqAmxDj5Rb32R4R4PjlNalsPkO5o377zvL-aA-zgA"
 }

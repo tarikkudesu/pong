@@ -31,7 +31,7 @@ class AuthService
     shouldAuthenticate(url)
     {
         const routes = [
-            '/signin', '/signup', '/logout', '/google', '/callback', '/get-otp', 'validate-otp'
+            '/signin', '/signup', '/logout', '/google', '/callback', '/get-otp', 'validate-otp', 'refresh'
         ];
         return !routes.some(path => url.pathname.endsWith(path));
     }
@@ -102,6 +102,34 @@ class AuthService
         // verify the otp if it valid or not and expire it if it is valid
         return { stat: true };
     }
+
+    async refreshToken({ token }) {
+        try {
+            
+            const decoded = jwt.verify(
+                token,
+                process.env.JWT_TOKEN_SECRET_REFRESH || "salam kalam 3alam"
+            );
+
+            const { user } = await this.userService.getUser(decoded.username);
+            if (!user)
+                return { stat: false, message: 'User not found' };
+            
+            const newAccessToken = jwt.sign(
+                { userId: user.id, username: user.name },
+                process.env.JWT_TOKEN_SECRET || "salam kalam 3alam",
+                { expiresIn: '15m' }
+            );
+
+            return { stat: true, token: newAccessToken };
+
+        } catch (err) {
+            return { stat: false, message: 'Invalid or expired refresh token' };
+        }
+    }
+
+
+
 }
 
 export { AuthService };

@@ -9,7 +9,6 @@ export default fp(async (fastify) =>
         if (!fastify.authService.shouldAuthenticate(new URL(request.url, baseUrl)))
             return ;
                 const cookies = cookie.parse(request.headers['cookie'] || '');
-        console.log(`-- ${cookies.token} --`);
         let stat = await fastify.authService.validToken(cookies.token)
         if (!stat.stat)
             return reply.code(403).send({message: "should Authenticate"});

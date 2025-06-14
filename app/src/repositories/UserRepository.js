@@ -18,8 +18,9 @@ class UserRepository
     }
 
     async getUser(criteria, fetchedFields)
-    {
-        return await this.#db.getOne('user',criteria, fetchedFields);
+    {        
+        const user = await this.#db.getOne('user',criteria, fetchedFields);
+        return user;
     }
 
     async deleteUser(user)

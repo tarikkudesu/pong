@@ -1,11 +1,18 @@
 export const signin = async (request, reply) => {
-    const response = await request.fastify.authService.canSignIn(request.body)  
+    const response = await request.fastify.authService.canSignIn(request.body)      
     if (response.stat)
     {
         const token = request.fastify.authService.generateToken(request.body, process.env.JWT_TOKEN_SECRET || "salam kalam 3alam", '60d');
         return reply.header('Set-Cookie', `token=${token}; Max-Age=5184000`)
                     .send({message: 'logged successfuly'});
     }
+    return reply.code(400).send({ error : response.message });
+}
+
+export const refreshToken = async (request, reply) => {
+    const response = await request.fastify.authService.refreshToken(request.body)  
+    if (response.stat)
+        return reply.send({ token: response.token });
     return reply.code(400).send({ error : response.message });
 }
 

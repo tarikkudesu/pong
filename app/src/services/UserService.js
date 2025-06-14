@@ -57,7 +57,7 @@ class UserService {
     async getUser(username, ...fetchedFields)
     {
         try {
-            const user = await this.UserRepository.getUser(username, fetchedFields);
+            const user = await this.UserRepository.getUser({ username }, fetchedFields);
             return { stat: true, user };
         } catch (error) {
             error.stat = false;
