@@ -1,4 +1,4 @@
-import { friction, PongWidth, PongHeight,randInt } from './index.js';
+import { friction, PongWidth, PongHeight, randInt } from './index.js';
 
 // ! Vector ------------------------------------------------------------------------------------------------
 export class Vector {
@@ -143,6 +143,8 @@ export class Pong {
 	public playerNoBan: number = 1;
 
 	// * game data
+	public wait: boolean = false;
+	public sound: boolean = false;
 	public keys: Keys = new Keys();
 	public ballRadius: number = 10; // * Customizable
 	public paddleHeight: number = 60; // * Customizable
@@ -180,7 +182,7 @@ export class Pong {
 			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
 		});
 		this.setup();
-		// setTimeout(() => this.setup(), 1000);
+		setTimeout(() => (this.wait = true), 1000);
 	}
 	setup(): void {
 		let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000) / 1000;
@@ -226,7 +228,7 @@ export class Pong {
 			this.penetration_resolution_ball_wall(this.ball, this.BottomWall);
 			this.collision_response_ball_wall(this.ball, this.BottomWall);
 		}
-		this.ball.reposition();
+		if (this.wait) this.ball.reposition();
 		if (this.collision_detection_ball_wall(this.ball, this.RightWall)) return BallState.OUT_RIGHT;
 		if (this.collision_detection_ball_wall(this.ball, this.LeftWall)) return BallState.OUT_LEFT;
 		return BallState.IN;
@@ -274,6 +276,7 @@ export class Pong {
 	collision_response_ball_wall(ball: Ball, wall: Wall): void {
 		const normal = ball.pos.subtr(this.closestPointOnLineSigment(ball.pos, wall)).unit();
 		ball.velocity = ball.velocity.subtr(normal.mult(2 * Vector.dot(ball.velocity, normal)));
+		this.sound = true;
 	}
 
 	// * Collision Ball Paddle
@@ -299,23 +302,27 @@ export class Pong {
 			ball.velocity.x = ball.velocity.y;
 			ball.velocity.y = x;
 		}
+		this.sound = true;
 	}
 
 	// * Main Frame
 	update(): boolean {
 		if (this.winner !== '') return true;
+		if (this.sound === true) this.sound = false;
 		this.updatePaddles();
 		const ballState: BallState = this.upddateBall();
 		if (ballState === BallState.OUT_RIGHT) {
 			this.opponentScore += 1;
 			this.playerNoBan += 1;
+			this.wait = false;
 			this.setup();
-			// setTimeout(() => this.setup(), 1000);
+			setTimeout(() => (this.wait = true), 1000);
 		} else if (ballState === BallState.OUT_LEFT) {
 			this.playerScore += 1;
 			this.playerNoBan += 1;
+			this.wait = false;
 			this.setup();
-			// setTimeout(() => this.setup(), 1000);
+			setTimeout(() => (this.wait = true), 1000);
 		}
 		if (this.playerScore >= 7) this.winner = this.opponent;
 		else if (this.opponentScore >= 7) this.winner = this.player;

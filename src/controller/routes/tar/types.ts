@@ -8,17 +8,20 @@ export type DoomType = 'C' | 'D' | 'B';
 export type TournamentPlayerTYPE = {
 	username: string;
 	level: number;
+	alias: string;
 };
 
 export type TournamentMatchTYPE = {
-	player: string;
-	opponent: string;
+	opponentAlias: string;
+	playerAlias: string;
 	finished: boolean;
-	// ! The attribute must never be on the client side, only in the server
+	// ! These attributes must never be on the client side, only in the server
+	opponent: string;
+	player: string;
 	GID: string;
 };
 
-export type ClientTournamentMatchTYPE = Omit<TournamentMatchTYPE, 'GID'>;
+export type ClientTournamentMatchTYPE = Omit<TournamentMatchTYPE, 'GID' | 'opponentAlias' | 'playerAlias'>;
 
 declare module 'ws' {
 	interface WebSocket {

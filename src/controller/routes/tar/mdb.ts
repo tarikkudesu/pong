@@ -35,7 +35,6 @@ import {
 	ClientTournament,
 	ClientTournamentMatchTYPE,
 } from './index.js';
-import _ from 'lodash';
 
 export class Invitation {
 	public game: GameTYPE;
@@ -101,10 +100,10 @@ export class Tournament {
 		this.name = uniqueNamesGenerator(customConfig);
 		this.due_date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes() + 1).getTime();
 	}
-	register(player: string) {
+	register(player: string, alias: string) {
 		if (Date.now() < this.due_date) throw new Error('Registration is not open yet my friend');
 		if (this.registeredPlayers.size >= this.maxPlayers) throw new Error('Tournament is Full');
-		if (![...this.registeredPlayers].some((e) => e.username === player)) this.registeredPlayers.add({ username: player, level: 0 });
+		if (![...this.registeredPlayers].some((e) => e.username === player)) this.registeredPlayers.add({ alias, username: player, level: 0 });
 		if (this.registeredPlayers.size === this.maxPlayers) this.state = 'playing';
 	}
 	levelup(player: string) {
@@ -167,7 +166,7 @@ class Mdb {
 						this.tournament.matches.clear();
 						for (let i = 0; i < winners.length; i++) {
 							if (i + 1 < winners.length) {
-								this.createTournamentMatch(winners[i].username, winners[i + 1].username);
+								this.createTournamentMatch(winners[i], winners[i + 1]);
 								i++;
 							} else {
 								this.tournament.levelup(winners[i].username);
@@ -179,22 +178,24 @@ class Mdb {
 				break;
 			}
 			case 'finished': {
+				// TODO:    DATABASE    INTERACTION    HERE
+				// TODO:    DATABASE    INTERACTION    HERE
+				// TODO:    DATABASE    INTERACTION    HERE
+				// TODO:    DATABASE    INTERACTION    HERE
 				this.tournament.newTournament();
 				break;
 			}
 		}
 	}
 
-	createTournamentMatch(player: string, opponent: string) {
+	createTournamentMatch(player: TournamentPlayerTYPE, opponent: TournamentPlayerTYPE) {
 		const GID: string = randomUUID();
-		this.tournament.matches.add({ player, opponent, finished: false, GID });
-		this.rooms.set(GID, new Room(player, opponent));
-		// this.addRoom(player, opponent, 'pong', GID);
+		this.tournament.matches.add({ player: player.username, opponent: opponent.username, playerAlias: player.alias, opponentAlias: opponent.alias, finished: false, GID });
+		this.rooms.set(GID, new Room(player.username, opponent.username));
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	register(username: string, name: string) {
-		this.tournament.register(username);
+	register(username: string, alias: string) {
+		this.tournament.register(username, alias);
 	}
 
 	/***************************************************************************************************************
@@ -255,6 +256,12 @@ class Mdb {
 		const r: Room = this.getRoom(flip.gid);
 		if (r.game && r.game instanceof Doom && (username === r.player || username === r.opponent)) r.game.flip(username, flip.pos);
 	}
+	// roomTinyChat(username: string, tiny: TinyChat): void {
+	// 	const r: Room = this.getRoom(tiny.gid);
+	// 	if (r.game && tiny.message.length <= 100 && (username === r.player || username === r.opponent)) {
+	// 		if (username === r.player) r.tinychat = tiny.message
+	// 	}
+	// }
 
 	// * update rooms
 	updateRooms(): void {
@@ -307,7 +314,7 @@ class Mdb {
 				try {
 					const i: Invitation = this.getInvitation(username, value.username);
 					pool.push(new ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status));
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				} catch (err: any) {
 					pool.push(new ClientPlayer(value.username, 'pong', value.socket.PLAYFREE === true ? 'free' : 'playing', 'unsent'));
 				}
@@ -389,12 +396,14 @@ class Mdb {
 				if (player.socket.OPEN && player.socket.PLAYFREE === false) {
 					const { roomState, game, opponent } = mdb.getRoom(player.socket.gid);
 					if (game && game instanceof Pong) {
-						const { ball, leftPaddle, rightPaddle, playerScore, opponentScore, winner } = game;
+						const { ball, leftPaddle, rightPaddle, playerScore, opponentScore, winner, sound } = game;
 						let clientPong: ClientPong = new ClientPong({
 							ball,
+							sound,
 							leftPaddle,
 							rightPaddle,
 							playerScore,
+							tinychat: '',
 							opponentScore,
 							won: winner === player.username,
 							stop: roomState === 'disconnected',
@@ -407,6 +416,7 @@ class Mdb {
 					} else if (game && game instanceof Doom) {
 						const { winner, myturn, timer } = game;
 						const clientDoom: ClientCardOfDoom = new ClientCardOfDoom({
+							tinychat: '',
 							cards: game.getMap(),
 							timer: Math.ceil((timeLimite - (Date.now() - timer)) / 1000),
 							won: winner === player.username,
@@ -419,7 +429,7 @@ class Mdb {
 						if (clientDoom.won || clientDoom.lost || clientDoom.stop) this.disconnectPlayer(player);
 					}
 				}
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			} catch (err: any) {
 				player.socket.PLAYFREE = true;
 				player.socket.gid = '';

@@ -139,6 +139,7 @@ export class Invitations {
 // * Game
 
 interface ClientPongProps {
+	sound: boolean;
 	start: boolean;
 	stop: boolean;
 	won: boolean;
@@ -147,10 +148,13 @@ interface ClientPongProps {
 	opponentScore: number;
 	rightPaddle: Paddle;
 	leftPaddle: Paddle;
+	tinychat: string;
 	ball: Ball;
 }
 
 export class ClientPong {
+	public sound: boolean;
+	public tinychat: string;
 	public playerScore: number;
 	public opponentScore: number;
 	public start: boolean = false;
@@ -166,7 +170,9 @@ export class ClientPong {
 	public leftPaddlePosY: number;
 	public rightPaddlePosX: number;
 	public rightPaddlePosY: number;
-	constructor({ playerScore, opponentScore, ball, rightPaddle, leftPaddle, start, stop, won, lost }: ClientPongProps) {
+	constructor({ playerScore, opponentScore, ball, rightPaddle, leftPaddle, start, stop, won, lost, tinychat, sound }: ClientPongProps) {
+		this.sound = sound;
+		this.tinychat = tinychat;
 		this.playerScore = playerScore;
 		this.opponentScore = opponentScore;
 		this.ballX = Math.ceil(ball.pos.x);
@@ -207,10 +213,12 @@ interface ClientCardOfDoomProps {
 	timer: number;
 	start: boolean;
 	myturn: boolean;
+	tinychat: string;
 	cards: string[];
 }
 
 export class ClientCardOfDoom {
+	public tinychat: string;
 	public cards: string[];
 	public start: boolean = false;
 	public stop: boolean = false;
@@ -218,7 +226,8 @@ export class ClientCardOfDoom {
 	public won: boolean = false;
 	public myturn: boolean;
 	public timer: number;
-	constructor({ cards, myturn, timer, start, stop, lost, won }: ClientCardOfDoomProps) {
+	constructor({ cards, myturn, timer, start, stop, lost, won, tinychat }: ClientCardOfDoomProps) {
+		this.tinychat = tinychat;
 		this.myturn = myturn;
 		this.timer = timer;
 		this.start = start;
@@ -234,9 +243,9 @@ export class ClientCardOfDoom {
 // * Pool
 
 export class Register {
-	name: string;
-	constructor(name: string) {
-		this.name = name;
+	alias: string;
+	constructor(alias: string) {
+		this.alias = alias;
 	}
 	public static instance = new Register('');
 }
@@ -254,6 +263,16 @@ export class Invite {
 		this.recipient = recipient;
 	}
 	public static instance = new Invite('');
+}
+
+export class TinyChat {
+	public gid: string;
+	public message: string;
+	constructor(message: string, gid: string) {
+		this.message = message;
+		this.gid = gid;
+	}
+	public static instance = new TinyChat('', '');
 }
 
 // * Game
@@ -342,7 +361,7 @@ export function useParser(json: string, socket: WebSocket) {
 		}
 		case 'REGISTER': {
 			const register: Register = Json({ message: data, target: Register.instance });
-			mdb.register(username, register.name);
+			mdb.register(username, register.alias);
 			// TODO: Refactor Later
 			break;
 		}
@@ -389,6 +408,12 @@ export function useParser(json: string, socket: WebSocket) {
 			// TODO: Refactor Later
 			break;
 		}
+		// case 'TYNICHAT': {
+		// 	const t: TinyChat = Json({ message: data, target: TinyChat.instance });
+		// 	mdb.roomTinyChat(username, t);
+		// 	// TODO: Refactor Later
+		// 	break;
+		// }
 		default:
 			throw new Error('UNKNOWN COMMAND');
 	}
@@ -401,7 +426,7 @@ export function closeSocket(socket: WebSocket) {
 				const room: Room = mdb.getRoom(socket.gid);
 				room.roomState = 'disconnected';
 				room.date_at = Date.now();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			} catch (err: any) {
 				/* empty */
 			}
