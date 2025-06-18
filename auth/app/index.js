@@ -8,7 +8,7 @@ function main() {
     }
 
     new Server(logger).start()
-    // new Server(true).start()
+    // new Server(flase).start()
     // new Server().start()
 }
 

@@ -20,7 +20,7 @@ class AuthService
         try {
             if (!token)
                 throw new Error("no token provided");
-            jwt.verify(token, process.env.JWT_TOKEN_SECRET || "salam kalam 3alam");
+            jwt.verify(token, process.env.JWT_SECRET || "salam kalam 3alam");
             return { stat: true };
         } catch (error) {
             error.stat = false
@@ -108,7 +108,7 @@ class AuthService
             
             const decoded = jwt.verify(
                 token,
-                process.env.JWT_TOKEN_SECRET_REFRESH || "salam kalam 3alam"
+                process.env.JWT_SECRET_REFRESH || "salam kalam 3alam"
             );
 
             const { user } = await this.userService.getUser(decoded.username);
@@ -117,7 +117,7 @@ class AuthService
             
             const newAccessToken = jwt.sign(
                 { userId: user.id, username: user.name },
-                process.env.JWT_TOKEN_SECRET || "salam kalam 3alam",
+                process.env.JWT_SECRET || "salam kalam 3alam",
                 { expiresIn: '15m' }
             );
 

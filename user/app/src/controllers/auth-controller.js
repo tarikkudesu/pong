@@ -2,7 +2,7 @@ export const signin = async (request, reply) => {
     const response = await request.fastify.authService.canSignIn(request.body)      
     if (response.stat)
     {
-        const token = request.fastify.authService.generateToken(request.body, process.env.JWT_TOKEN_SECRET || "salam kalam 3alam", '60d');
+        const token = request.fastify.authService.generateToken(request.body, process.env.JWT_SECRET || "salam kalam 3alam", '60d');
         return reply.header('Set-Cookie', `token=${token}; Max-Age=5184000`)
                     .send({message: 'logged successfuly'});
     }
@@ -20,7 +20,7 @@ export const signup = async (request, reply) => {
     const response = await request.fastify.authService.canSignUp(request.body)
     if (response.stat)
     {
-        const token = request.fastify.authService.generateToken(request.body, process.env.JWT_TOKEN_SECRET || "salam kalam 3alam", '60d'); 
+        const token = request.fastify.authService.generateToken(request.body, process.env.JWT_SECRET || "salam kalam 3alam", '60d'); 
         return reply.header('Set-Cookie', `token=${token}; Max-Age=5184000`)
                     .send({data: "ok"});
     }
@@ -53,7 +53,19 @@ export const verifyOtp = async (request, reply) => {
 }
 
 export const preflight = async (request, reply) => {
-    return reply.header('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*')
-        .header('Access-Control-Allow-Headers', 'Content-Type')
-        .send();
+    const allowedOrigins = process.env.ALLOWED_ORIGIN
+        ? process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim())
+        : [];
+
+    const origin = request.headers.origin;
+
+    if (!origin || !allowedOrigins.includes(origin))
+        return reply.code(403).send({ 
+            error: 'Origin not allowed by CORS policy'
+        });
+
+    return reply
+            .header('Access-Control-Allow-Origin', origin)
+            .header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+            .header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }

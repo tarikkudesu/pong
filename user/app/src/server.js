@@ -9,20 +9,20 @@ class Server {
         this.fastify =  Fastify({ logger });
     }
 
-    async registerPlugins()
+    registerPlugins()
     {
         /**
          * the order of the layers is important, due to its architecture nature.
          * dao layer used by service leyer which is used by the controller
          */
 
-        this.fastify.register(await import('./hooks/index.js'));
-        this.fastify.register(await import('./repositories/index.js'));
-        this.fastify.register(await import('./services/index.js'));
-        this.fastify.register(await import('./routes/index.js'));
+        this.fastify.register(import('./hooks/index.js'));
+        this.fastify.register(import('./repositories/index.js'));
+        this.fastify.register(import('./services/index.js'));
+        this.fastify.register(import('./routes/index.js'));
     }
 
-    async listen()
+    listen()
     {
         this.fastify.listen({
             port : process.env.SERVER_PORT || 3000,
@@ -30,15 +30,15 @@ class Server {
         });
     }
 
-    async start()
+    start()
     {
         /**
          * load the environnement vars from .env
          */
         env.config({ path: './.env' });
 
-        await this.registerPlugins();
-        await this.listen();
+        this.registerPlugins();
+        this.listen();
     }
 }
 

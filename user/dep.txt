@@ -1,0 +1,2 @@
+d : bcrypt fastify fastify-plugin jsonwebtoken nodemailer redis sqlite sqlite3 better-sqlite3
+D : dotenv nodemon pino-pretty

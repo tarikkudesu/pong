@@ -8,6 +8,13 @@ class AuthService
     {
         this.userService = userService;
     }
+
+    signin()
+    {
+        return {
+            msg: 'test'
+        };
+    }
 }
 
 export { AuthService };
