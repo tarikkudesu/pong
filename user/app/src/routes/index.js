@@ -1,7 +1,6 @@
 
-export default async (fastify) => {
-
-    fastify.decorate('status_code', (await import('http')).STATUS_CODES)
+export default async (fastify) =>
+{
 
     fastify.register(await import('./user.js'), {prefix: '/api/user'});
     fastify.register(await import('./auth.js'), {prefix: '/api/auth'});

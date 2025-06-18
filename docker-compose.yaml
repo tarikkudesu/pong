@@ -10,14 +10,22 @@ services:
       - trance
     init: true
 
-  pong:
-    build: ./app
-    image: pong:oo
-    container_name: pong
+  user:
+    build: ./user
+    image: user:oo
+    container_name: user
     ports:
       - "3000:3000"
-    volumes:
-      - pong:/app
+    networks:
+      - trance
+    init: true
+
+  auth:
+    build: ./auth
+    image: auth:oo
+    container_name: auth
+    ports:
+      - "3001:3001"
     networks:
       - trance
     init: true
@@ -31,15 +39,6 @@ services:
     networks:
       - trance
     init: true
-
-volumes:
-  pong:
-    name: pong
-    driver: local
-    driver_opts:
-      o: bind
-      device: ./app
-      type: none
 
 networks:
   trance:
