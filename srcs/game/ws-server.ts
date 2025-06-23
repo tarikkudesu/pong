@@ -1,4 +1,4 @@
-import { GameTYPE, PlayerStateTYPE, InvitationStateTYPE, mdb, Player, Room, Ball, Paddle, PongWidth, TournamentStateTYPE, TournamentPlayerTYPE, ClientTournamentMatchTYPE } from './index.js';
+import { GameTYPE, PlayerStateTYPE, InvitationStateTYPE, mdb, Room, Ball, Paddle, PongWidth, TournamentStateTYPE, TournamentPlayerTYPE, ClientTournamentMatchTYPE } from './index.js';
 import { WebSocket } from 'ws';
 
 import _ from 'lodash';
@@ -6,20 +6,20 @@ import _ from 'lodash';
 // ! shared ------------------------------------------------------------------------------------------
 
 interface MessageProps {
-	username: string;
-	message: string;
-	hash: string;
-	game: GameTYPE;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	data: any;
+	hash: string;
+	game: GameTYPE;
+	message: string;
+	username: string;
 }
 export class Message {
-	public username: string;
-	public message: string;
-	public hash: string;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public data: any;
+	public hash: string;
 	public game: GameTYPE;
+	public message: string;
+	public username: string;
 	constructor({ username, hash, message, data, game }: MessageProps) {
 		this.data = JSON.stringify(data);
 		this.username = username;
@@ -354,66 +354,47 @@ export function useParser(json: string, socket: WebSocket) {
 	console.log(username, message);
 	switch (message) {
 		case 'CONNECT': {
-			const player: Player = mdb.createPlayer(username, socket);
-			mdb.addPlayer(player);
-			// TODO: Refactor Later
+			mdb.addPlayer(mdb.createPlayer(username, socket));
 			break;
 		}
 		case 'REGISTER': {
-			const register: Register = Json({ message: data, target: Register.instance });
-			mdb.register(username, register.alias);
-			// TODO: Refactor Later
+			mdb.register(username, Json({ message: data, target: Register.instance }).alias);
 			break;
 		}
 		case 'ENGAGE': {
-			const engage: Engage = Json({ message: data, target: Engage.instance });
-			mdb.connectPlayer(username, engage.gid, game);
-			// TODO: Refactor Later
+			mdb.connectPlayer(username, Json({ message: data, target: Engage.instance }).gid, game);
 			break;
 		}
 		case 'INVITE': {
-			const invite: Invite = Json({ message: data, target: Invite.instance });
-			mdb.createInvitation(username, invite.recipient, game);
-			// TODO: Refactor Later
+			mdb.createInvitation(username, Json({ message: data, target: Invite.instance }).recipient, game);
 			break;
 		}
 		case 'ACCEPT': {
-			const invite: Invite = Json({ message: data, target: Invite.instance });
-			mdb.acceptInvitation(invite.recipient, username);
-			// TODO: Refactor Later
+			mdb.acceptInvitation(Json({ message: data, target: Invite.instance }).recipient, username);
 			break;
 		}
 		case 'REJECT': {
-			const invite: Invite = Json({ message: data, target: Invite.instance });
-			mdb.declineInvitation(invite.recipient, username);
-			// TODO: Refactor Later
+			mdb.declineInvitation(Json({ message: data, target: Invite.instance }).recipient, username);
 			break;
 		}
 		case 'DELETE': {
 			const invite: Invite = Json({ message: data, target: Invite.instance });
 			if (invite.recipient === '*') mdb.deleteAllRejectedInvitations(username);
-			// TODO: Refactor Later
 			else mdb.cancelInvitation(invite.recipient, username);
 			break;
 		}
 		case 'HOOK': {
-			const h: Hook = Json({ message: data, target: Hook.instance });
-			mdb.roomHook(username, h);
-			// TODO: Refactor Later
+			mdb.roomHook(username, Json({ message: data, target: Hook.instance }));
 			break;
 		}
 		case 'FLIP': {
-			const f: Flip = Json({ message: data, target: Flip.instance });
-			mdb.roomFlip(username, f);
-			// TODO: Refactor Later
+			mdb.roomFlip(username, Json({ message: data, target: Flip.instance }));
 			break;
 		}
-		// case 'TYNICHAT': {
-		// 	const t: TinyChat = Json({ message: data, target: TinyChat.instance });
-		// 	mdb.roomTinyChat(username, t);
-		// 	// TODO: Refactor Later
-		// 	break;
-		// }
+		case 'TYNICHAT': {
+			mdb.roomTinyChat(username, Json({ message: data, target: TinyChat.instance }));
+			break;
+		}
 		default:
 			throw new Error('UNKNOWN COMMAND');
 	}
@@ -426,7 +407,7 @@ export function closeSocket(socket: WebSocket) {
 				const room: Room = mdb.getRoom(socket.gid);
 				room.roomState = 'disconnected';
 				room.date_at = Date.now();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
 			} catch (err: any) {
 				/* empty */
 			}
@@ -441,8 +422,8 @@ export function eventEntry(message: string, socket: WebSocket) {
 		useParser(message, socket);
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} catch (error: any) {
-		socket.send(ErrorMessage(error.message));
-		console.error('\x1b[31mError processing message:', error.message);
+		socket.send(ErrorMessage("you didn't pong good enough"));
+		console.error('Error', error.message);
 	}
 }
 

@@ -10,6 +10,7 @@ import {
 	Pong,
 	Doom,
 	GameTYPE,
+	TinyChat,
 	timeLimite,
 	ClientPong,
 	DoomMessage,
@@ -23,16 +24,16 @@ import {
 	transformFrame,
 	ClientCardOfDoom,
 	ClientInvitation,
+	ClientTournament,
 	InvitationMessage,
 	invitationTimeout,
 	roomFinishTimeout,
-	InvitationStateTYPE,
-	roomConnectionTimeout,
-	TournamentPlayerTYPE,
-	TournamentMatchTYPE,
-	TournamentStateTYPE,
 	TournamentMessage,
-	ClientTournament,
+	TournamentStateTYPE,
+	TournamentMatchTYPE,
+	InvitationStateTYPE,
+	TournamentPlayerTYPE,
+	roomConnectionTimeout,
 	ClientTournamentMatchTYPE,
 } from './index.js';
 
@@ -66,6 +67,8 @@ export class Player {
 export class Room {
 	public player: string;
 	public opponent: string;
+	public playerTinyChat: string = '';
+	public opponentTinyChat: string = '';
 	public date_at: number = Date.now();
 	public game: Pong | Doom | null = null;
 	public roomState: RoomStateTYPE = 'connecting';
@@ -256,12 +259,13 @@ class Mdb {
 		const r: Room = this.getRoom(flip.gid);
 		if (r.game && r.game instanceof Doom && (username === r.player || username === r.opponent)) r.game.flip(username, flip.pos);
 	}
-	// roomTinyChat(username: string, tiny: TinyChat): void {
-	// 	const r: Room = this.getRoom(tiny.gid);
-	// 	if (r.game && tiny.message.length <= 100 && (username === r.player || username === r.opponent)) {
-	// 		if (username === r.player) r.tinychat = tiny.message
-	// 	}
-	// }
+	roomTinyChat(username: string, tiny: TinyChat): void {
+		const r: Room = this.getRoom(tiny.gid);
+		if (r.game && tiny.message.length <= 100 && (username === r.player || username === r.opponent)) {
+			if (username === r.player) r.opponentTinyChat = tiny.message;
+			else r.playerTinyChat = tiny.message;
+		}
+	}
 
 	// * update rooms
 	updateRooms(): void {
@@ -314,7 +318,7 @@ class Mdb {
 				try {
 					const i: Invitation = this.getInvitation(username, value.username);
 					pool.push(new ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status));
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
 				} catch (err: any) {
 					pool.push(new ClientPlayer(value.username, 'pong', value.socket.PLAYFREE === true ? 'free' : 'playing', 'unsent'));
 				}
@@ -394,7 +398,7 @@ class Mdb {
 		this.players.forEach((player) => {
 			try {
 				if (player.socket.OPEN && player.socket.PLAYFREE === false) {
-					const { roomState, game, opponent } = mdb.getRoom(player.socket.gid);
+					const { roomState, game, opponent, playerTinyChat, opponentTinyChat } = mdb.getRoom(player.socket.gid);
 					if (game && game instanceof Pong) {
 						const { ball, leftPaddle, rightPaddle, playerScore, opponentScore, winner, sound } = game;
 						let clientPong: ClientPong = new ClientPong({
@@ -403,11 +407,11 @@ class Mdb {
 							leftPaddle,
 							rightPaddle,
 							playerScore,
-							tinychat: '',
 							opponentScore,
 							won: winner === player.username,
 							stop: roomState === 'disconnected',
 							lost: winner !== '' && winner !== player.username,
+							tinychat: player.username === opponent ? playerTinyChat : opponentTinyChat,
 							start: roomState !== 'connecting' && roomState !== 'player-1-connected' && roomState !== 'player-2-connected',
 						});
 						if (player.username !== opponent) clientPong = transformFrame(clientPong);
@@ -416,20 +420,20 @@ class Mdb {
 					} else if (game && game instanceof Doom) {
 						const { winner, myturn, timer } = game;
 						const clientDoom: ClientCardOfDoom = new ClientCardOfDoom({
-							tinychat: '',
 							cards: game.getMap(),
-							timer: Math.ceil((timeLimite - (Date.now() - timer)) / 1000),
 							won: winner === player.username,
 							myturn: myturn === player.username,
 							stop: roomState === 'disconnected',
 							lost: winner !== '' && winner !== player.username,
+							timer: Math.ceil((timeLimite - (Date.now() - timer)) / 1000),
+							tinychat: player.username === opponent ? playerTinyChat : opponentTinyChat,
 							start: roomState !== 'connecting' && roomState !== 'player-1-connected' && roomState !== 'player-2-connected',
 						});
 						player.socket.send(DoomMessage(player.username, player.socket.hash, 'doom', clientDoom));
 						if (clientDoom.won || clientDoom.lost || clientDoom.stop) this.disconnectPlayer(player);
 					}
 				}
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
 			} catch (err: any) {
 				player.socket.PLAYFREE = true;
 				player.socket.gid = '';
