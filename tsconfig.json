@@ -7,9 +7,9 @@
 		"moduleResolution": "Node",
 		"strict": true,
 		"forceConsistentCasingInFileNames": true,
-		"outDir": "srcs/game/dist",
+		"outDir": "srcs/dist",
 		"rootDir": "srcs/game",
-		"sourceMap": true
+		"sourceMap": false
 	},
 	"include": ["srcs/game"],
 	"exclude": ["node_modules"]
