@@ -15,7 +15,6 @@ export type TournamentMatchTYPE = {
 	opponentAlias: string;
 	playerAlias: string;
 	finished: boolean;
-	// ! These attributes must never be on the client side, only in the server
 	opponent: string;
 	player: string;
 	GID: string;

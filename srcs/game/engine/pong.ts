@@ -1,4 +1,4 @@
-import { friction, PongWidth, PongHeight, randInt } from './index.js';
+import * as Main from '../index.js';
 
 // ! Vector ------------------------------------------------------------------------------------------------
 export class Vector {
@@ -109,7 +109,7 @@ export class Paddle {
 	}
 	reposition(): void {
 		this.acc = this.acc.unit().mult(this.acceleration);
-		this.vel = this.vel.add(this.acc).mult(1 - friction);
+		this.vel = this.vel.add(this.acc).mult(1 - Main.friction);
 		const newPos = this.pos.add(this.vel);
 		if (newPos.y < this.constrains.x) newPos.y = this.constrains.x;
 		if (newPos.y > this.constrains.y) newPos.y = this.constrains.y;
@@ -163,33 +163,33 @@ export class Pong {
 		this.opponent = opponent;
 
 		// * Create Walls
-		this.TopWall = new Wall({ start: new Vector(0, 0), end: new Vector(PongWidth, 0) });
-		this.RightWall = new Wall({ start: new Vector(PongWidth, 0), end: new Vector(PongWidth, PongHeight) });
-		this.BottomWall = new Wall({ start: new Vector(PongWidth, PongHeight), end: new Vector(0, PongHeight) });
-		this.LeftWall = new Wall({ start: new Vector(0, PongHeight), end: new Vector(0, 0) });
+		this.TopWall = new Wall({ start: new Vector(0, 0), end: new Vector(Main.PongWidth, 0) });
+		this.RightWall = new Wall({ start: new Vector(Main.PongWidth, 0), end: new Vector(Main.PongWidth, Main.PongHeight) });
+		this.BottomWall = new Wall({ start: new Vector(Main.PongWidth, Main.PongHeight), end: new Vector(0, Main.PongHeight) });
+		this.LeftWall = new Wall({ start: new Vector(0, Main.PongHeight), end: new Vector(0, 0) });
 
 		// * Create Paddles
 		this.rightPaddle = new Paddle({
-			start: new Vector(PongWidth - this.paddleDistance, PongHeight / 2 - this.paddleHeight),
-			end: new Vector(PongWidth - this.paddleDistance, PongHeight / 2 + this.paddleHeight),
+			start: new Vector(Main.PongWidth - this.paddleDistance, Main.PongHeight / 2 - this.paddleHeight),
+			end: new Vector(Main.PongWidth - this.paddleDistance, Main.PongHeight / 2 + this.paddleHeight),
 			radius: this.paddleRadius,
-			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
+			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, Main.PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
 		});
 		this.leftPaddle = new Paddle({
-			start: new Vector(this.paddleDistance, PongHeight / 2 - this.paddleHeight),
-			end: new Vector(this.paddleDistance, PongHeight / 2 + this.paddleHeight),
+			start: new Vector(this.paddleDistance, Main.PongHeight / 2 - this.paddleHeight),
+			end: new Vector(this.paddleDistance, Main.PongHeight / 2 + this.paddleHeight),
 			radius: this.paddleRadius,
-			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
+			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, Main.PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
 		});
 		this.setup();
 		setTimeout(() => (this.wait = true), 1000);
 	}
 	setup(): void {
-		let angle: number = randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000) / 1000;
+		let angle: number = Main.randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000) / 1000;
 		if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI;
 		// * Create ball
 		this.ball = new Ball({
-			pos: new Vector(PongWidth / 2, PongHeight / 2),
+			pos: new Vector(Main.PongWidth / 2, Main.PongHeight / 2),
 			radius: this.ballRadius,
 			velocity: new Vector(1 * Math.cos(angle), 1 * Math.sin(angle)).unit(),
 		});
