@@ -36,7 +36,7 @@ export function getRoom(gid: string): Room {
 
 // * remove room
 export function removeRoom(room: Room, key: string) {
-	Main.repository.tournament.registerRoomResult(room, key);
+	Main.registerRoomResult(room, key);
 	Main.repository.rooms.delete(key);
 }
 
@@ -86,7 +86,7 @@ export function updateRooms(): void {
 		if (room.game && room.game.update()) {
 			room.roomState = 'finished';
 			room.date_at = Date.now();
-			Main.repository.tournament.registerRoomResult(room, key);
+			Main.registerRoomResult(room, key);
 			// TODO:    DATABASE    INTERACTION    HERE
 			// TODO:    DATABASE    INTERACTION    HERE
 			// TODO:    DATABASE    INTERACTION    HERE

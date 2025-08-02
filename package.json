@@ -24,14 +24,14 @@
 		"unique-names-generator": "^4.7.1"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.29.0",
+		"@eslint/js": "^9.32.0",
 		"@types/lodash": "^4.17.17",
 		"@types/node": "^24.1.0",
 		"@types/ws": "^8.18.1",
 		"dotenv": "^16.5.0",
 		"esbuild": "0.25.5",
-		"eslint": "^9.29.0",
-		"globals": "^16.2.0",
+		"eslint": "^9.32.0",
+		"globals": "^16.3.0",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.34.1"
 	}

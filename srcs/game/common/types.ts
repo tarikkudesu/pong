@@ -1,6 +1,6 @@
 export type RoomStateTYPE = 'connecting' | 'player-1-connected' | 'player-2-connected' | 'playing' | 'disconnected' | 'finished';
 export type InvitationStateTYPE = 'unsent' | 'pending' | 'accepted' | 'declined';
-export type TournamentStateTYPE = 'not open' | 'open' | 'playing' | 'finished';
+export type TournamentStateTYPE = 'new' | 'not open' | 'open' | 'playing' | 'finished';
 export type PlayerStateTYPE = 'playing' | 'free';
 export type GameTYPE = 'pong' | 'doom';
 export type DoomType = 'C' | 'D' | 'B';
