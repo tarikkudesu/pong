@@ -12,10 +12,18 @@ class Server {
 	}
 
 	async listen() {
-		this.fastify.listen({
-			port: 3000,
-			host: '0.0.0.0',
-		});
+		this.fastify.listen(
+			{
+				port: 3000,
+				host: '0.0.0.0',
+			},
+			(err, address) => {
+				if (err) {
+					process.exit(1);
+				}
+				console.log(`fastify server is running on ${address}...`);
+			}
+		);
 	}
 
 	async start() {

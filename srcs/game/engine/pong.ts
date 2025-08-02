@@ -37,21 +37,17 @@ export class Vector {
 
 // ! Ball ------------------------------------------------------------------------------------------------
 interface BallProps {
-	pos: Vector;
-	radius: number;
-	velocity: Vector;
+	direction: Vector;
 }
 export class Ball {
 	public pos: Vector;
-	public radius: number;
-	public velocity: Vector = new Vector(0, 0);
-	constructor({ pos, radius, velocity }: BallProps) {
-		this.pos = pos;
-		this.radius = radius;
-		this.velocity = velocity;
+	public direction: Vector = new Vector(0, 0);
+	constructor({ direction }: BallProps) {
+		this.pos = new Vector(Main.PongWidth / 2, Main.PongHeight / 2);
+		this.direction = direction;
 	}
 	reposition(): void {
-		this.pos = this.pos.add(this.velocity.mult(10));
+		this.pos = this.pos.add(this.direction.mult(Main.BallVelocity));
 	}
 }
 
@@ -77,30 +73,21 @@ export class Wall {
 
 // ! Paddle ------------------------------------------------------------------------------------------------
 interface PaddleProps {
-	constrains: Vector;
-	radius: number;
-	start: Vector;
-	end: Vector;
+	center: Vector;
 }
 export class Paddle {
 	public start: Vector;
 	public end: Vector;
-	public radius: number;
-	public length: number;
 	public dir: Vector;
 	public pos: Vector;
 	public vel: Vector = new Vector(0, 0);
 	public acc: Vector = new Vector(0, 0);
-	public constrains: Vector = new Vector(0, 0);
 	public acceleration: number = 1.8;
-	constructor({ constrains, radius, start, end }: PaddleProps) {
-		this.constrains = constrains;
-		this.radius = radius;
-		this.start = start;
-		this.end = end;
-		this.pos = this.start.add(this.end).mult(0.5);
+	constructor({ center }: PaddleProps) {
+		this.start = new Vector(center.x, center.y - Math.ceil(Main.PaddleHeight));
+		this.end = new Vector(center.x, center.y + Math.ceil(Main.PaddleHeight));
+		this.pos = center;
 		this.dir = this.end.subtr(this.start).unit();
-		this.length = this.end.subtr(this.start).mag();
 	}
 	move(Up: boolean, Down: boolean): void {
 		if (Up) this.acc = this.dir.mult(-this.acceleration);
@@ -111,11 +98,12 @@ export class Paddle {
 		this.acc = this.acc.unit().mult(this.acceleration);
 		this.vel = this.vel.add(this.acc).mult(1 - Main.friction);
 		const newPos = this.pos.add(this.vel);
-		if (newPos.y < this.constrains.x) newPos.y = this.constrains.x;
-		if (newPos.y > this.constrains.y) newPos.y = this.constrains.y;
+		if (newPos.y < 0) newPos.y = 0;
+		if (newPos.y > Main.PongHeight) newPos.y = Main.PongHeight;
 		this.pos = newPos;
-		this.start = this.pos.add(this.dir.mult(-this.length / 2));
-		this.end = this.pos.add(this.dir.mult(this.length / 2));
+		const length = this.end.subtr(this.start).mag();
+		this.start = this.pos.add(this.dir.mult(-length / 2));
+		this.end = this.pos.add(this.dir.mult(length / 2));
 	}
 }
 
@@ -146,17 +134,13 @@ export class Pong {
 	public wait: boolean = false;
 	public sound: boolean = false;
 	public keys: Keys = new Keys();
-	public ballRadius: number = 10; // * Customizable
-	public paddleHeight: number = 60; // * Customizable
-	public paddleRadius: number = 10; // * Customizable
-	public paddleDistance: number = 15; // * Customizable
 	public TopWall: Wall = new Wall({ start: new Vector(0, 0), end: new Vector(0, 0) });
 	public RightWall: Wall = new Wall({ start: new Vector(0, 0), end: new Vector(0, 0) });
 	public BottomWall: Wall = new Wall({ start: new Vector(0, 0), end: new Vector(0, 0) });
 	public LeftWall: Wall = new Wall({ start: new Vector(0, 0), end: new Vector(0, 0) });
-	public ball: Ball = new Ball({ pos: new Vector(0, 0), radius: 0, velocity: new Vector(0, 0) });
-	public rightPaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
-	public leftPaddle: Paddle = new Paddle({ start: new Vector(0, 0), end: new Vector(0, 0), radius: 0, constrains: new Vector(0, 0) });
+	public ball: Ball = new Ball({ direction: new Vector(0, 0) });
+	public rightPaddle: Paddle = new Paddle({ center: new Vector(0, 0) });
+	public leftPaddle: Paddle = new Paddle({ center: new Vector(0, 0) });
 
 	constructor(player: string, opponent: string) {
 		this.player = player;
@@ -169,37 +153,21 @@ export class Pong {
 		this.LeftWall = new Wall({ start: new Vector(0, Main.PongHeight), end: new Vector(0, 0) });
 
 		// * Create Paddles
-		this.rightPaddle = new Paddle({
-			start: new Vector(Main.PongWidth - this.paddleDistance, Main.PongHeight / 2 - this.paddleHeight),
-			end: new Vector(Main.PongWidth - this.paddleDistance, Main.PongHeight / 2 + this.paddleHeight),
-			radius: this.paddleRadius,
-			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, Main.PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
-		});
-		this.leftPaddle = new Paddle({
-			start: new Vector(this.paddleDistance, Main.PongHeight / 2 - this.paddleHeight),
-			end: new Vector(this.paddleDistance, Main.PongHeight / 2 + this.paddleHeight),
-			radius: this.paddleRadius,
-			constrains: new Vector(this.paddleHeight + this.paddleRadius + this.ballRadius, Main.PongHeight - this.paddleHeight - this.paddleRadius - this.ballRadius),
-		});
+		this.rightPaddle = new Paddle({ center: new Vector(Main.PongWidth - Main.PaddleDistance, Math.ceil(Main.PongHeight / 2)) });
+		this.leftPaddle = new Paddle({ center: new Vector(Main.PaddleDistance, Math.ceil(Main.PongHeight / 2)) });
 		this.setup();
-		setTimeout(() => (this.wait = true), 1000);
 	}
 	setup(): void {
 		let angle: number = Main.randInt((-Math.PI / 4) * 1000, (Math.PI / 4) * 1000) / 1000;
 		if (this.playerNoBan === 3 || this.playerNoBan === 4) angle += Math.PI;
-		// * Create ball
-		this.ball = new Ball({
-			pos: new Vector(Main.PongWidth / 2, Main.PongHeight / 2),
-			radius: this.ballRadius,
-			velocity: new Vector(1 * Math.cos(angle), 1 * Math.sin(angle)).unit(),
-		});
+		this.ball = new Ball({ direction: new Vector(1 * Math.cos(angle), 1 * Math.sin(angle)).unit() });
+		setTimeout(() => (this.wait = true), 1000);
 	}
 	keyPressRight(up: boolean, down: boolean): void {
 		if (up) this.keys.UP_R = true;
 		else this.keys.UP_R = false;
 		if (down) this.keys.DOWN_R = true;
 		else this.keys.DOWN_R = false;
-
 		this.rightPaddle.move(up, down);
 	}
 	keyPressLeft(up: boolean, down: boolean): void {
@@ -207,123 +175,159 @@ export class Pong {
 		else this.keys.UP_R = false;
 		if (down) this.keys.DOWN_R = true;
 		else this.keys.DOWN_R = false;
-
 		this.leftPaddle.move(up, down);
 	}
 
-	upddateBall(): BallState {
-		if (this.collision_ball_paddle(this.ball, this.rightPaddle)) {
-			this.penetration_resolution_ball_paddle(this.ball, this.rightPaddle);
-			this.collision_response_ball_paddle(this.ball, this.rightPaddle);
-		}
-		if (this.collision_ball_paddle(this.ball, this.leftPaddle)) {
-			this.penetration_resolution_ball_paddle(this.ball, this.leftPaddle);
-			this.collision_response_ball_paddle(this.ball, this.leftPaddle);
-		}
-		if (this.collision_detection_ball_wall(this.ball, this.TopWall)) {
-			this.penetration_resolution_ball_wall(this.ball, this.TopWall);
-			this.collision_response_ball_wall(this.ball, this.TopWall);
-		}
-		if (this.collision_detection_ball_wall(this.ball, this.BottomWall)) {
-			this.penetration_resolution_ball_wall(this.ball, this.BottomWall);
-			this.collision_response_ball_wall(this.ball, this.BottomWall);
-		}
-		if (this.wait) this.ball.reposition();
-		if (this.collision_detection_ball_wall(this.ball, this.RightWall)) return BallState.OUT_RIGHT;
-		if (this.collision_detection_ball_wall(this.ball, this.LeftWall)) return BallState.OUT_LEFT;
-		return BallState.IN;
+	// ! Walls
+	// * COLLISION DETECTION
+	collision_detection_ball_wall_top(): boolean {
+		return this.ball.pos.y < Main.BallRadius;
 	}
-	updatePaddles(): void {
-		if (this.collision_ball_paddle(this.ball, this.rightPaddle)) {
-			this.penetration_resolution_ball_paddle(this.ball, this.rightPaddle);
-			this.collision_response_ball_paddle(this.ball, this.rightPaddle);
-		}
-		if (this.collision_ball_paddle(this.ball, this.leftPaddle)) {
-			this.penetration_resolution_ball_paddle(this.ball, this.leftPaddle);
-			this.collision_response_ball_paddle(this.ball, this.leftPaddle);
-		}
-		this.rightPaddle.reposition();
-		this.leftPaddle.reposition();
+	collision_detection_ball_wall_bottom(): boolean {
+		return this.ball.pos.y > Main.PongHeight - Main.BallRadius;
 	}
-
-	// * Collisions
-	closestPointOnLineSigment(point: Vector, wall: Wall): Vector {
-		// * check if the ball is before the line segment
-		const ballToWallStart = wall.start.subtr(point);
-		if (Vector.dot(wall.dir, ballToWallStart) > 0) return wall.start;
-		// * check if the ball is after the line segment
-		const wallEndToBall = point.subtr(wall.end);
-		if (Vector.dot(wall.dir, wallEndToBall) > 0) return wall.end;
-		// * check if the ball is inside the line segment
-		const closestDist = Vector.dot(wall.dir, ballToWallStart);
-		const closestVect = wall.dir.mult(closestDist);
-		return wall.start.subtr(closestVect);
-	}
-
-	// * Collision Ball Wall
-	collision_detection_ball_wall(ball: Ball, wall: Wall): boolean {
-		const ballToClosest = this.closestPointOnLineSigment(ball.pos, wall).subtr(ball.pos);
-		const penVect = ball.pos.subtr(this.closestPointOnLineSigment(ball.pos, wall));
-		if (Vector.dot(penVect, wall.dir.normal()) < 0) return true;
-		if (ballToClosest.mag() <= ball.radius) return true;
-		return false;
-	}
-	penetration_resolution_ball_wall(ball: Ball, wall: Wall): void {
-		let penVect = ball.pos.subtr(this.closestPointOnLineSigment(ball.pos, wall));
-		if (Vector.dot(penVect, wall.dir.normal()) < 0) penVect = penVect.normal().normal();
-		ball.pos = ball.pos.add(penVect.unit().mult(ball.radius - penVect.mag()));
-	}
-	collision_response_ball_wall(ball: Ball, wall: Wall): void {
-		const normal = ball.pos.subtr(this.closestPointOnLineSigment(ball.pos, wall)).unit();
-		ball.velocity = ball.velocity.subtr(normal.mult(2 * Vector.dot(ball.velocity, normal)));
-		this.sound = true;
-	}
-
-	// * Collision Ball Paddle
-	collision_ball_paddle(ball: Ball, paddle: Paddle): boolean {
-		const wall = new Wall({ start: paddle.start, end: paddle.end });
-		const ballToClosest = this.closestPointOnLineSigment(ball.pos, wall);
-		const distance = ballToClosest.subtr(ball.pos).mag();
-		if (distance < paddle.radius + ball.radius) return true;
-		return false;
-	}
-	penetration_resolution_ball_paddle(ball: Ball, paddle: Paddle): void {
-		const wall = new Wall({ start: paddle.start, end: paddle.end });
-		const penVect = ball.pos.subtr(this.closestPointOnLineSigment(ball.pos, wall));
-		ball.pos = ball.pos.add(penVect.unit().mult(ball.radius + paddle.radius - penVect.mag()));
-	}
-	collision_response_ball_paddle(ball: Ball, paddle: Paddle): void {
-		const wall = new Wall({ start: paddle.start, end: paddle.end });
-		const normal = ball.pos.subtr(this.closestPointOnLineSigment(ball.pos, wall)).unit();
-		ball.velocity = ball.velocity.subtr(normal.mult(Vector.dot(ball.velocity, normal)).mult(2)).mult(1 + paddle.acc.unit().mag() * 0.2);
-		if (ball.velocity.mag() > 2) ball.velocity = ball.velocity.unit().mult(2);
-		if (Math.abs(ball.velocity.y) > Math.abs(ball.velocity.x)) {
-			const x = ball.velocity.x;
-			ball.velocity.x = ball.velocity.y;
-			ball.velocity.y = x;
-		}
-		this.sound = true;
-	}
-
-	// * Main Frame
-	update(): boolean {
-		if (this.winner !== '') return true;
-		if (this.sound === true) this.sound = false;
-		this.updatePaddles();
-		const ballState: BallState = this.upddateBall();
-		if (ballState === BallState.OUT_RIGHT) {
+	collision_detection_ball_wall_left(): void {
+		// return this.ball.pos.x < Main.BallRadius;
+		if (this.ball.pos.x < Main.BallRadius) {
 			this.opponentScore += 1;
 			this.playerNoBan += 1;
 			this.wait = false;
 			this.setup();
-			setTimeout(() => (this.wait = true), 1000);
-		} else if (ballState === BallState.OUT_LEFT) {
+		}
+	}
+	collision_detection_ball_wall_right(): void {
+		// return this.ball.pos.x > Main.PongWidth - Main.BallRadius;
+		if (this.ball.pos.x > Main.PongWidth - Main.BallRadius) {
 			this.playerScore += 1;
 			this.playerNoBan += 1;
 			this.wait = false;
 			this.setup();
-			setTimeout(() => (this.wait = true), 1000);
 		}
+	}
+	// * PENETRATION RESOLUTION
+	penetration_resolution_ball_wall_top(): void {
+		const currPos: Vector = this.ball.pos;
+		this.ball.pos.y = Main.BallRadius;
+		this.ball.pos.x = (this.ball.direction.x * (this.ball.pos.y - currPos.y)) / this.ball.direction.y + currPos.x;
+	}
+	penetration_resolution_ball_wall_bottom(): void {
+		const currPos: Vector = this.ball.pos;
+		this.ball.pos.y = Main.PongHeight - Main.BallRadius;
+		this.ball.pos.x = (this.ball.direction.x * (this.ball.pos.y - currPos.y)) / this.ball.direction.y + currPos.x;
+	}
+	penetration_resolution_ball_wall_left(): void {
+		const currPos: Vector = this.ball.pos;
+		this.ball.pos.x = Main.BallRadius;
+		this.ball.pos.y = (this.ball.direction.y * (this.ball.pos.x - currPos.x)) / this.ball.direction.x + currPos.y;
+	}
+	penetration_resolution_ball_wall_right(): void {
+		const currPos: Vector = this.ball.pos;
+		this.ball.pos.x = Main.PongWidth - Main.BallRadius;
+		this.ball.pos.y = (this.ball.direction.y * (this.ball.pos.x - currPos.x)) / this.ball.direction.x + currPos.y;
+	}
+	// * COLLISION RESPONSE
+	collision_response_ball_wall(closest: Vector): void {
+		const normal = this.ball.pos.subtr(closest).unit();
+		this.ball.direction = this.ball.direction.subtr(normal.mult(2 * Vector.dot(this.ball.direction, normal)));
+		this.sound = true;
+	}
+	// ! Paddles
+	// * COLLISION DETECTION
+	collision_detection_ball_paddle(closest: Vector): boolean {
+		const dist: number = closest.subtr(this.ball.pos).mag();
+		if (dist < Main.PaddleRadius + Main.BallRadius) return true;
+		return false;
+	}
+	// * PENETRATION RESOLUTION
+	penetration_resolution_ball_paddle(closest: Vector): void {
+		const penetration: Vector = this.ball.pos.subtr(closest);
+		this.ball.pos = this.ball.pos.add(penetration.unit().mult(Main.BallRadius + Main.PaddleRadius - penetration.mag()));
+	}
+	// * COLLISION RESPONSE
+	collision_response_ball_paddle_right(closest: Vector): void {
+		const normal = this.ball.pos.subtr(closest).unit();
+		this.ball.direction = this.ball.direction
+			.subtr(normal.mult(Vector.dot(this.ball.direction, normal)).mult(2))
+			.mult(1 + this.rightPaddle.acc.unit().mag() * 0.2);
+		if (this.ball.direction.mag() > 2) this.ball.direction = this.ball.direction.unit().mult(2);
+		if (Math.abs(this.ball.direction.y) > Math.abs(this.ball.direction.x)) {
+			const x = this.ball.direction.x;
+			this.ball.direction.x = this.ball.direction.y;
+			this.ball.direction.y = x;
+		}
+		this.sound = true;
+	}
+	collision_response_ball_paddle_left(closest: Vector): void {
+		const normal = this.ball.pos.subtr(closest).unit();
+		this.ball.direction = this.ball.direction
+			.subtr(normal.mult(Vector.dot(this.ball.direction, normal)).mult(2))
+			.mult(1 + this.leftPaddle.acc.unit().mag() * 0.2);
+		if (this.ball.direction.mag() > 2) this.ball.direction = this.ball.direction.unit().mult(2);
+		if (Math.abs(this.ball.direction.y) > Math.abs(this.ball.direction.x)) {
+			const x = this.ball.direction.x;
+			this.ball.direction.x = this.ball.direction.y;
+			this.ball.direction.y = x;
+		}
+		this.sound = true;
+	}
+
+	// * Collisions
+	closestPointOnLineSigment(point: Vector, start: Vector, end: Vector): Vector {
+		const dir: Vector = end.subtr(start).unit();
+		// * check if the ball is before the line segment
+		const ballToWallStart = start.subtr(point);
+		if (Vector.dot(dir, ballToWallStart) > 0) return start;
+		// * check if the ball is after the line segment
+		const wallEndToBall = point.subtr(end);
+		if (Vector.dot(dir, wallEndToBall) > 0) return end;
+		// * check if the ball is inside the line segment
+		const closestDist = Vector.dot(dir, ballToWallStart);
+		const closestVect = dir.mult(closestDist);
+		return start.subtr(closestVect);
+	}
+
+	// * Main Frame
+	updateObjects() {
+		let closest: Vector = this.closestPointOnLineSigment(this.ball.pos, this.TopWall.start, this.TopWall.end);
+		if (this.collision_detection_ball_wall_top()) {
+			this.penetration_resolution_ball_wall_top();
+			this.collision_response_ball_wall(closest);
+		}
+		closest = this.closestPointOnLineSigment(this.ball.pos, this.BottomWall.start, this.BottomWall.end);
+		if (this.collision_detection_ball_wall_bottom()) {
+			this.penetration_resolution_ball_wall_bottom();
+			this.collision_response_ball_wall(closest);
+		}
+		// closest = this.closestPointOnLineSigment(this.ball.pos, this.RightWall.start, this.RightWall.end);
+		// if (this.collision_detection_ball_wall_right()) {
+		// 	this.penetration_resolution_ball_wall_right();
+		// 	this.collision_response_ball_wall(closest);
+		// }
+		// closest = this.closestPointOnLineSigment(this.ball.pos, this.LeftWall.start, this.LeftWall.end);
+		// if (this.collision_detection_ball_wall_left()) {
+		// 	this.penetration_resolution_ball_wall_left();
+		// 	this.collision_response_ball_wall(closest);
+		// }
+		this.collision_detection_ball_wall_right();
+		this.collision_detection_ball_wall_left();
+		if (this.wait) this.ball.reposition();
+		closest = this.closestPointOnLineSigment(this.ball.pos, this.rightPaddle.start, this.rightPaddle.end);
+		if (this.collision_detection_ball_paddle(closest)) {
+			this.penetration_resolution_ball_paddle(closest);
+			this.collision_response_ball_paddle_right(closest);
+		}
+		closest = this.closestPointOnLineSigment(this.ball.pos, this.leftPaddle.start, this.leftPaddle.end);
+		if (this.collision_detection_ball_paddle(closest)) {
+			this.penetration_resolution_ball_paddle(closest);
+			this.collision_response_ball_paddle_left(closest);
+		}
+		this.rightPaddle.reposition();
+		this.leftPaddle.reposition();
+	}
+	update(): boolean {
+		if (this.winner !== '') return true;
+		this.sound = false;
+		this.updateObjects();
 		if (this.playerScore >= 7) this.winner = this.opponent;
 		else if (this.opponentScore >= 7) this.winner = this.player;
 		if (this.playerNoBan >= 5) this.playerNoBan = 1;

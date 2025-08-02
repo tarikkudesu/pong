@@ -17,7 +17,12 @@ export function PoolMessage(username: string, hash: string, game: Main.GameTYPE,
 	return JSON.stringify(new Main.Message({ username, hash, message: 'POOL', game, data: new Main.Pool(getClientPlayers()) }));
 }
 
-export function InvitationMessage(username: string, hash: string, game: Main.GameTYPE, getInvitions: () => Main.ClientInvitation[]): string {
+export function InvitationMessage(
+	username: string,
+	hash: string,
+	game: Main.GameTYPE,
+	getInvitions: () => Main.ClientInvitation[]
+): string {
 	return JSON.stringify(new Main.Message({ username, hash, message: 'INVITATIONS', game, data: new Main.Invitations(getInvitions()) }));
 }
 

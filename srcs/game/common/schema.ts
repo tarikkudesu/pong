@@ -171,13 +171,13 @@ export class ClientPong {
 		this.opponentScore = opponentScore;
 		this.ballX = Math.ceil(ball.pos.x);
 		this.ballY = Math.ceil(ball.pos.y);
-		this.ballRadius = Math.ceil(ball.radius);
-		this.paddleRadius = Math.ceil(rightPaddle.radius);
+		this.ballRadius = Math.ceil(Main.BallRadius);
+		this.paddleRadius = Math.ceil(Main.PaddleRadius);
 		this.rightPaddlePosX = Math.ceil(rightPaddle.pos.x);
 		this.rightPaddlePosY = Math.ceil(rightPaddle.pos.y);
 		this.leftPaddlePosX = Math.ceil(leftPaddle.pos.x);
 		this.leftPaddlePosY = Math.ceil(leftPaddle.pos.y);
-		this.paddleHeight = Math.ceil(rightPaddle.length);
+		this.paddleHeight = Math.ceil(2 * Main.PaddleHeight);
 		this.start = start !== undefined ? start : false;
 		this.stop = stop !== undefined ? stop : false;
 		this.lost = lost !== undefined ? lost : false;

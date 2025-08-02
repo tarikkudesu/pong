@@ -60,7 +60,9 @@ export function getPool(username: string): Main.ClientPlayer[] {
 		if (value.username !== username) {
 			try {
 				const i: Main.Invitation = Main.getInvitation(username, value.username);
-				pool.push(new Main.ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status));
+				pool.push(
+					new Main.ClientPlayer(value.username, i.game, value.socket.PLAYFREE === true ? 'free' : 'playing', i.invite_status)
+				);
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
 			} catch (err: any) {
 				pool.push(new Main.ClientPlayer(value.username, 'pong', value.socket.PLAYFREE === true ? 'free' : 'playing', 'unsent'));

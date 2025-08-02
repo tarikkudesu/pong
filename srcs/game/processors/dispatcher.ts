@@ -85,7 +85,9 @@ export function sendTournament() {
 export function sendInvitations() {
 	Main.repository.players.forEach((player) => {
 		if (player.socket.OPEN && player.socket.PLAYFREE === true) {
-			const m: string = Main.InvitationMessage(player.username, player.socket.hash, 'pong', () => Main.getAllPlayerInvitations(player.username));
+			const m: string = Main.InvitationMessage(player.username, player.socket.hash, 'pong', () =>
+				Main.getAllPlayerInvitations(player.username)
+			);
 			if (m !== player.prevInvitations) {
 				player.prevInvitations = m;
 				player.socket.send(m);
